@@ -32,10 +32,11 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
 
   return (
     <div
-      className="rounded-3xl overflow-hidden"
       style={{
         background: "var(--bg-secondary)",
         border: "1px solid var(--border-color)",
+        borderRadius: "24px",
+        overflow: "hidden",
       }}
     >
       <textarea
@@ -45,23 +46,47 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
         placeholder="发送消息..."
         rows={4}
         disabled={disabled}
-        className="w-full bg-transparent outline-none resize-none text-[15px] leading-7 px-5 pt-5 pb-1"
         style={{
+          width: "100%",
+          background: "transparent",
           color: "var(--text-primary)",
+          border: "none",
+          outline: "none",
+          resize: "none",
+          fontSize: "15px",
+          lineHeight: "1.8",
+          padding: "20px 20px 4px 20px",
+          minHeight: "120px",
           maxHeight: "200px",
-          minHeight: "110px",
+          boxSizing: "border-box",
+          WebkitAppearance: "none",
+          fontFamily: "inherit",
         }}
       />
-      <div className="flex items-center justify-end px-4 pb-4 pt-1">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          padding: "4px 16px 16px 16px",
+        }}
+      >
         <button
           onClick={handleSend}
           disabled={!value.trim() || disabled}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200"
           style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             background: "var(--accent)",
             color: "#1a1410",
-            opacity: value.trim() && !disabled ? 1 : 0.4,
+            border: "none",
+            opacity: value.trim() && !disabled ? 1 : 0.35,
             cursor: value.trim() && !disabled ? "pointer" : "default",
+            transition: "opacity 0.2s",
           }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
