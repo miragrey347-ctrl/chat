@@ -375,7 +375,7 @@ export default function ChatPage() {
   const handleEditResend = async (index: number, newContent: string) => {
     if (!currentConvId) return;
 
-    // Delete messages from DB that come after the edited message
+    // Delete messages from DB (from edited index onward)
     const toDelete = messages.slice(index);
     for (const msg of toDelete) {
       await fetch("/api/messages", {
@@ -385,11 +385,109 @@ export default function ChatPage() {
       });
     }
 
-    // Update local state
-    setMessages(messages.slice(0, index));
+    // Keep messages before edited one, add new user message
+    const kept = messages.slice(0, index);
+    const newUserMsg: Message = {
+      id: generateId(),
+      conversation_id: currentConvId,
+      role: "user",
+      content: newContent,
+      created_at: new Date().toISOString(),
+    };
+    const newAssistant: Message = {
+      id: generateId(),
+      conversation_id: currentConvId,
+      role: "assistant",
+      content: "",
+      thinking_content: "",
+      model_used: model,
+      created_at: new Date().toISOString(),
+    };
 
-    // Send the new content
-    setTimeout(() => handleSend(newContent), 100);
+    const updatedKept = [...kept, newUserMsg];
+    setMessages([...updatedKept, newAssistant]);
+    setIsStreaming(true);
+
+    // Save new user message to DB
+    saveMessage({ conversation_id: currentConvId, role: "user", content: newContent });
+
+    // Build API messages
+    const systemPrompt = getCurrentSystemPrompt();
+    const apiMessages: { role: string; content: string }[] = [];
+    if (systemPrompt) apiMessages.push({ role: "system", content: systemPrompt });
+    updatedKept.forEach((m) => apiMessages.push({ role: m.role, content: m.content }));
+
+    try {
+      abortRef.current = new AbortController();
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages, model, stream: true }),
+        signal: abortRef.current.signal,
+      });
+
+      if (!response.ok) throw new Error(`API error ${response.status}`);
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullContent = "";
+      let thinkingContent = "";
+      let inThinking = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          const data = trimmed.slice(6);
+          if (data === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta;
+            if (delta?.content) {
+              let chunk = delta.content;
+              if (chunk.includes("<thinking>")) { inThinking = true; chunk = chunk.replace("<thinking>", ""); }
+              if (chunk.includes("</thinking>")) { inThinking = false; chunk = chunk.replace("</thinking>", ""); }
+              if (inThinking) thinkingContent += chunk; else fullContent += chunk;
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last.role === "assistant") {
+                  updated[updated.length - 1] = { ...last, content: fullContent, thinking_content: thinkingContent || undefined };
+                }
+                return updated;
+              });
+            }
+          } catch { /* skip */ }
+        }
+      }
+
+      saveMessage({
+        conversation_id: currentConvId,
+        role: "assistant",
+        content: fullContent,
+        thinking_content: thinkingContent || undefined,
+        model_used: model,
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last.role === "assistant") updated[updated.length - 1] = { ...last, content: `⚠️ 错误：${errorMessage}` };
+        return updated;
+      });
+    } finally {
+      setIsStreaming(false);
+      abortRef.current = null;
+    }
   };
 
   // Regenerate: remove last assistant message, re-request with same context
