@@ -40,19 +40,16 @@ export default function LoginPage() {
       style={{ background: "var(--bg-primary)" }}
     >
       <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: "380px" }}>
-        {/* Logo area */}
+        {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-            style={{ background: "var(--accent-muted)" }}
+          <svg
+            className="mb-4"
+            width="32" height="32" viewBox="0 0 24 24" fill="none"
+            stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+            style={{ opacity: 0.7 }}
           >
-            <svg
-              width="26" height="26" viewBox="0 0 24 24" fill="none"
-              stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-            >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-          </div>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
           <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
             Chat
           </h1>
@@ -78,7 +75,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="输入访问密码"
             autoFocus
-            className="w-full px-4 py-3 rounded-xl text-[15px] outline-none transition-all duration-200"
+            className="w-full px-5 py-4 rounded-2xl text-[15px] outline-none transition-all duration-200"
             style={{
               background: "var(--bg-tertiary)",
               color: "var(--text-primary)",
@@ -97,7 +94,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading || !password}
-            className="w-full mt-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200"
+            className="w-full mt-4 py-4 rounded-2xl text-[15px] font-medium transition-all duration-200"
             style={{
               background: password ? "var(--accent)" : "var(--bg-tertiary)",
               color: password ? "#1a1410" : "var(--text-tertiary)",
