@@ -170,16 +170,11 @@ export default function ChatPage() {
     <div className="h-screen flex flex-col" style={{ background: "var(--bg-primary)" }}>
       {/* Header */}
       <header
-        className="shrink-0 flex items-center justify-between px-5 py-3 border-b"
+        className="shrink-0 flex items-center justify-center px-5 py-3.5 border-b"
         style={{ borderColor: "var(--border-subtle)" }}
       >
-        <div className="flex items-center gap-3">
-          <h1 className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-            Chat
-          </h1>
-        </div>
         <div
-          className="text-xs px-2.5 py-1 rounded-lg"
+          className="text-xs px-3 py-1.5 rounded-lg font-medium"
           style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}
         >
           {modelDisplayName}
@@ -187,10 +182,18 @@ export default function ChatPage() {
       </header>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-4 md:px-0">
+      <main className="flex-1 overflow-y-auto px-5">
         <div className="max-w-3xl mx-auto">
           {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full min-h-[60vh]">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ background: "var(--accent-muted)" }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
               <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
                 发送一条消息开始对话
               </p>
@@ -209,10 +212,10 @@ export default function ChatPage() {
       </main>
 
       {/* Input */}
-      <footer className="shrink-0 px-4 pb-5 pt-2">
-        <div className="max-w-2xl mx-auto">
+      <footer className="shrink-0 px-5 pb-6 pt-3">
+        <div className="max-w-3xl mx-auto">
           <ChatInput onSend={handleSend} disabled={isStreaming} />
-          <p className="text-center text-xs mt-2.5" style={{ color: "var(--text-tertiary)" }}>
+          <p className="text-center text-xs mt-3" style={{ color: "var(--text-tertiary)" }}>
             AI 可能会犯错，请核实重要信息
           </p>
         </div>
