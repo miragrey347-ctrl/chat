@@ -5,6 +5,7 @@ import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import Sidebar from "@/components/Sidebar";
 import ModelSelector from "@/components/ModelSelector";
+import AssistantManager from "@/components/AssistantManager";
 import type { Message, Conversation, Assistant } from "@/lib/types";
 
 function generateId() {
@@ -18,6 +19,7 @@ export default function ChatPage() {
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [assistantManagerOpen, setAssistantManagerOpen] = useState(false);
   const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -87,6 +89,13 @@ export default function ChatPage() {
     if (!conv?.assistant_id) return "";
     const assistant = assistants.find((a) => a.id === conv.assistant_id);
     return assistant?.system_prompt || "";
+  };
+
+  const getCurrentAssistant = (): Assistant | null => {
+    if (!currentConvId) return assistants[0] || null;
+    const conv = conversations.find((c) => c.id === currentConvId);
+    if (!conv?.assistant_id) return null;
+    return assistants.find((a) => a.id === conv.assistant_id) || null;
   };
 
   // Create new conversation
@@ -177,6 +186,8 @@ export default function ChatPage() {
     content: string;
     thinking_content?: string;
     model_used?: string;
+    input_tokens?: number | null;
+    output_tokens?: number | null;
   }) => {
     try {
       await fetch("/api/messages", {
@@ -288,6 +299,7 @@ export default function ChatPage() {
       let fullContent = "";
       let thinkingContent = "";
       let inThinking = false;
+      let usageData: { prompt_tokens?: number; completion_tokens?: number } = {};
 
       while (true) {
         const { done, value } = await reader.read();
@@ -306,6 +318,12 @@ export default function ChatPage() {
 
           try {
             const parsed = JSON.parse(data);
+
+            // Capture usage data
+            if (parsed.usage) {
+              usageData = parsed.usage;
+            }
+
             const delta = parsed.choices?.[0]?.delta;
 
             if (delta?.content) {
@@ -345,14 +363,32 @@ export default function ChatPage() {
         }
       }
 
-      // Save assistant message to DB
+      // Save assistant message to DB with token stats
       saveMessage({
         conversation_id: convId!,
         role: "assistant",
         content: fullContent,
         thinking_content: thinkingContent || undefined,
         model_used: model,
+        input_tokens: usageData.prompt_tokens || null,
+        output_tokens: usageData.completion_tokens || null,
       });
+
+      // Update local message with token stats
+      if (usageData.prompt_tokens || usageData.completion_tokens) {
+        setMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last.role === "assistant") {
+            updated[updated.length - 1] = {
+              ...last,
+              input_tokens: usageData.prompt_tokens,
+              output_tokens: usageData.completion_tokens,
+            };
+          }
+          return updated;
+        });
+      }
     } catch (error: unknown) {
       if (error instanceof Error && error.name === "AbortError") return;
 
@@ -667,8 +703,28 @@ export default function ChatPage() {
 
         <ModelSelector currentModel={model} onChange={handleModelChange} />
 
-        <div style={{ width: "30px" }} />
+        <button
+          onClick={() => setAssistantManagerOpen(true)}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--text-secondary)",
+            cursor: "pointer",
+            padding: "6px",
+            fontSize: "16px",
+          }}
+        >
+          ⚙
+        </button>
       </header>
+
+      {/* Assistant Manager */}
+      <AssistantManager
+        assistants={assistants}
+        isOpen={assistantManagerOpen}
+        onClose={() => setAssistantManagerOpen(false)}
+        onRefresh={fetchAssistants}
+      />
 
       {/* Messages */}
       <main style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
@@ -708,6 +764,34 @@ export default function ChatPage() {
       {/* Input */}
       <footer style={{ flexShrink: 0, padding: "8px 16px 20px" }}>
         <div style={{ maxWidth: "768px", margin: "0 auto" }}>
+          {/* Quick messages */}
+          {(() => {
+            const assistant = getCurrentAssistant();
+            const qm = assistant?.quick_messages as { name: string; content: string }[] | undefined;
+            if (!qm || qm.length === 0 || isStreaming) return null;
+            return (
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px" }}>
+                {qm.map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(q.content)}
+                    style={{
+                      background: "var(--bg-secondary)",
+                      border: "1px solid var(--border-color)",
+                      borderRadius: "20px",
+                      padding: "6px 14px",
+                      fontSize: "12px",
+                      color: "var(--text-secondary)",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {q.name}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
           <ChatInput onSend={handleSend} disabled={isStreaming} />
           <p style={{ textAlign: "center", fontSize: "12px", marginTop: "10px", color: "var(--text-tertiary)" }}>
             AI 可能会犯错，请核实重要信息
