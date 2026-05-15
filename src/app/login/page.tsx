@@ -57,10 +57,11 @@ export default function LoginPage() {
 
         {/* Input card */}
         <div
-          className="rounded-2xl p-6"
           style={{
             background: "var(--bg-secondary)",
             border: "1px solid var(--border-subtle)",
+            borderRadius: "20px",
+            padding: "28px 24px",
           }}
         >
           <label
@@ -75,11 +76,17 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="输入访问密码"
             autoFocus
-            className="w-full px-5 py-4 rounded-2xl text-[15px] outline-none transition-all duration-200"
+            className="w-full outline-none transition-all duration-200"
             style={{
               background: "var(--bg-tertiary)",
               color: "var(--text-primary)",
               border: `1.5px solid ${focused ? "var(--accent)" : "transparent"}`,
+              borderRadius: "16px",
+              padding: "16px 20px",
+              fontSize: "15px",
+              height: "54px",
+              boxSizing: "border-box",
+              WebkitAppearance: "none",
             }}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
@@ -94,12 +101,19 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading || !password}
-            className="w-full mt-4 py-4 rounded-2xl text-[15px] font-medium transition-all duration-200"
+            className="w-full transition-all duration-200"
             style={{
               background: password ? "var(--accent)" : "var(--bg-tertiary)",
               color: password ? "#1a1410" : "var(--text-tertiary)",
               cursor: password && !loading ? "pointer" : "not-allowed",
               opacity: loading ? 0.6 : 1,
+              borderRadius: "16px",
+              padding: "16px 20px",
+              fontSize: "15px",
+              fontWeight: 500,
+              height: "54px",
+              marginTop: "12px",
+              border: "none",
             }}
           >
             {loading ? "验证中..." : "进入"}
