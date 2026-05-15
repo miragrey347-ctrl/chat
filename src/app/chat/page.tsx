@@ -209,10 +209,10 @@ export default function ChatPage() {
       </main>
 
       {/* Input */}
-      <footer className="shrink-0 px-4 md:px-0 pb-4 pt-2">
-        <div className="max-w-3xl mx-auto">
+      <footer className="shrink-0 px-4 pb-5 pt-2">
+        <div className="max-w-2xl mx-auto">
           <ChatInput onSend={handleSend} disabled={isStreaming} />
-          <p className="text-center text-xs mt-2" style={{ color: "var(--text-tertiary)" }}>
+          <p className="text-center text-xs mt-2.5" style={{ color: "var(--text-tertiary)" }}>
             AI 可能会犯错，请核实重要信息
           </p>
         </div>

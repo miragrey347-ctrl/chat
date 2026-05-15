@@ -42,7 +42,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
 
   return (
     <div
-      className="border rounded-2xl flex items-end gap-2 p-3"
+      className="border rounded-2xl flex items-end gap-3 px-4 py-3"
       style={{
         background: "var(--bg-input)",
         borderColor: "var(--border-color)",
@@ -54,18 +54,19 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="发送消息..."
-        rows={1}
+        rows={2}
         disabled={disabled}
-        className="flex-1 bg-transparent outline-none resize-none text-sm leading-relaxed"
+        className="flex-1 bg-transparent outline-none resize-none text-[15px] leading-relaxed"
         style={{
           color: "var(--text-primary)",
           maxHeight: "200px",
+          minHeight: "44px",
         }}
       />
       <button
         onClick={handleSend}
         disabled={!value.trim() || disabled}
-        className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+        className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all mb-0.5"
         style={{
           background: value.trim() ? "var(--accent)" : "var(--bg-tertiary)",
           color: value.trim() ? "#1a1410" : "var(--text-tertiary)",
