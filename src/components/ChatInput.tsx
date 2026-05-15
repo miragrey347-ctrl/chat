@@ -11,7 +11,6 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -19,7 +18,6 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, [value]);
 
-  // Focus on mount
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
@@ -29,45 +27,39 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
     if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue("");
-    // Reset height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Enter = newline (default), no send shortcut
-    // This matches the spec: Enter = 换行, send = click button
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
   return (
     <div
-      className="border rounded-3xl flex flex-col overflow-hidden"
+      className="rounded-2xl overflow-hidden transition-colors duration-200"
       style={{
         background: "var(--bg-secondary)",
-        borderColor: "var(--border-color)",
+        border: "1px solid var(--border-color)",
       }}
     >
       <textarea
         ref={textareaRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
         placeholder="发送消息..."
-        rows={1}
+        rows={3}
         disabled={disabled}
-        className="flex-1 bg-transparent outline-none resize-none text-[15px] leading-relaxed px-5 pt-4 pb-1"
+        className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed px-5 pt-4 pb-2"
         style={{
           color: "var(--text-primary)",
           maxHeight: "200px",
-          minHeight: "48px",
+          minHeight: "80px",
         }}
       />
-      <div className="flex items-center justify-end px-3 pb-3 pt-1">
+      <div className="flex items-center justify-between px-4 pb-3 pt-0">
+        <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+          Enter 换行
+        </span>
         <button
           onClick={handleSend}
           disabled={!value.trim() || disabled}
-          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all"
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
           style={{
             background: value.trim() ? "var(--accent)" : "var(--bg-tertiary)",
             color: value.trim() ? "#1a1410" : "var(--text-tertiary)",
