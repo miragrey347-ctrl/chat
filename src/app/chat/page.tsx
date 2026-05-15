@@ -83,19 +83,72 @@ export default function ChatPage() {
   }, [messages, scrollToBottom]);
 
   // Get current assistant's system prompt
-  const getCurrentSystemPrompt = () => {
-    if (!currentConvId) return "";
-    const conv = conversations.find((c) => c.id === currentConvId);
-    if (!conv?.assistant_id) return "";
-    const assistant = assistants.find((a) => a.id === conv.assistant_id);
-    return assistant?.system_prompt || "";
+  const [globalMemories, setGlobalMemories] = useState<{ id: string; content: string }[]>([]);
+  const [assistantMemories, setAssistantMemories] = useState<{ id: string; content: string }[]>([]);
+
+  // Fetch global memories on mount
+  useEffect(() => {
+    fetchGlobalMemories();
+  }, []);
+
+  const fetchGlobalMemories = async () => {
+    try {
+      const res = await fetch("/api/memories?type=global");
+      const data = await res.json();
+      if (Array.isArray(data)) setGlobalMemories(data);
+    } catch (e) { console.error("Failed to fetch global memories:", e); }
   };
 
-  const getCurrentAssistant = (): Assistant | null => {
+  // Fetch assistant memories when conversation changes
+  useEffect(() => {
+    const assistant = getCurrentAssistantRaw();
+    if (assistant?.memory_enabled && assistant?.id) {
+      fetchAssistantMemories(assistant.id);
+    } else {
+      setAssistantMemories([]);
+    }
+  }, [currentConvId, conversations, assistants]);
+
+  const fetchAssistantMemories = async (assistantId: string) => {
+    try {
+      const res = await fetch(`/api/memories?assistant_id=${assistantId}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setAssistantMemories(data);
+    } catch (e) { console.error("Failed to fetch assistant memories:", e); }
+  };
+
+  // Raw helper (no dependency on state setters)
+  const getCurrentAssistantRaw = (): Assistant | null => {
     if (!currentConvId) return assistants[0] || null;
     const conv = conversations.find((c) => c.id === currentConvId);
     if (!conv?.assistant_id) return null;
     return assistants.find((a) => a.id === conv.assistant_id) || null;
+  };
+
+  const getCurrentSystemPrompt = () => {
+    const conv = conversations.find((c) => c.id === currentConvId);
+    const assistant = conv?.assistant_id ? assistants.find((a) => a.id === conv.assistant_id) : null;
+    let prompt = assistant?.system_prompt || "";
+
+    // Inject memories
+    const memoryParts: string[] = [];
+    if (globalMemories.length > 0) {
+      memoryParts.push("## 全局记忆\n" + globalMemories.map((m) => "- " + m.content).join("\n"));
+    }
+    if (assistant?.memory_enabled && assistantMemories.length > 0) {
+      memoryParts.push("## 助手记忆\n" + assistantMemories.map((m) => "- " + m.content).join("\n"));
+    }
+
+    if (memoryParts.length > 0) {
+      const memoryBlock = "\n\n<memories>\n" + memoryParts.join("\n\n") + "\n</memories>";
+      prompt = prompt ? prompt + memoryBlock : memoryBlock;
+    }
+
+    return prompt;
+  };
+
+  const getCurrentAssistant = (): Assistant | null => {
+    return getCurrentAssistantRaw();
   };
 
   // Create new conversation
@@ -724,6 +777,7 @@ export default function ChatPage() {
         isOpen={assistantManagerOpen}
         onClose={() => setAssistantManagerOpen(false)}
         onRefresh={fetchAssistants}
+        onRefreshMemories={fetchGlobalMemories}
       />
 
       {/* Messages */}
