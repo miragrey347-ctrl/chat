@@ -371,6 +371,74 @@ export default function ChatPage() {
     }
   };
 
+  // Edit and resend: remove messages after index, send new content
+  const handleEditResend = async (index: number, newContent: string) => {
+    if (!currentConvId) return;
+
+    // Delete messages from DB that come after the edited message
+    const toDelete = messages.slice(index);
+    for (const msg of toDelete) {
+      await fetch("/api/messages", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: msg.id }),
+      });
+    }
+
+    // Update local state
+    setMessages(messages.slice(0, index));
+
+    // Send the new content
+    setTimeout(() => handleSend(newContent), 100);
+  };
+
+  // Regenerate: remove last assistant message and resend last user message
+  const handleRegenerate = async () => {
+    if (!currentConvId || messages.length < 2) return;
+
+    const lastAssistant = messages[messages.length - 1];
+    if (lastAssistant.role !== "assistant") return;
+
+    // Find last user message
+    const lastUserIndex = messages.length - 2;
+    const lastUser = messages[lastUserIndex];
+    if (lastUser.role !== "user") return;
+
+    // Delete assistant message from DB
+    await fetch("/api/messages", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: lastAssistant.id }),
+    });
+
+    // Remove from state and resend
+    setMessages(messages.slice(0, -1));
+    setTimeout(() => handleSend(lastUser.content), 100);
+  };
+
+  // Delete single message
+  const handleDeleteMessage = async (msgId: string, index: number) => {
+    await fetch("/api/messages", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: msgId }),
+    });
+
+    // If deleting user message, also delete the following assistant message
+    const updated = [...messages];
+    if (messages[index].role === "user" && messages[index + 1]?.role === "assistant") {
+      await fetch("/api/messages", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: messages[index + 1].id }),
+      });
+      updated.splice(index, 2);
+    } else {
+      updated.splice(index, 1);
+    }
+    setMessages(updated);
+  };
+
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
       {/* Sidebar */}
@@ -442,6 +510,9 @@ export default function ChatPage() {
               key={msg.id}
               message={msg}
               isStreaming={isStreaming && i === messages.length - 1 && msg.role === "assistant"}
+              onEdit={msg.role === "user" ? (newContent) => handleEditResend(i, newContent) : undefined}
+              onRegenerate={msg.role === "assistant" && i === messages.length - 1 ? () => handleRegenerate() : undefined}
+              onDelete={() => handleDeleteMessage(msg.id, i)}
             />
           ))}
           <div ref={messagesEndRef} style={{ height: "16px" }} />
