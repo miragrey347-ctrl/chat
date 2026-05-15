@@ -34,11 +34,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}>
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "var(--bg-primary)" }}>
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm p-8 rounded-2xl"
-        style={{ background: "var(--bg-secondary)" }}
+        className="w-full p-8 rounded-2xl"
+        style={{ background: "var(--bg-secondary)", maxWidth: "360px", border: "1px solid var(--border-subtle)" }}
       >
         <h1
           className="text-2xl font-semibold mb-6 text-center"
