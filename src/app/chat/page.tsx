@@ -3,22 +3,75 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
-import type { Message } from "@/lib/types";
-
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4";
+import Sidebar from "@/components/Sidebar";
+import ModelSelector from "@/components/ModelSelector";
+import type { Message, Conversation, Assistant } from "@/lib/types";
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
 export default function ChatPage() {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [model] = useState(DEFAULT_MODEL);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Auto-scroll
+  // Load conversations and assistants on mount
+  useEffect(() => {
+    fetchConversations();
+    fetchAssistants();
+  }, []);
+
+  const fetchConversations = async () => {
+    try {
+      const res = await fetch("/api/conversations");
+      const data = await res.json();
+      if (Array.isArray(data)) setConversations(data);
+    } catch (e) {
+      console.error("Failed to fetch conversations:", e);
+    }
+  };
+
+  const fetchAssistants = async () => {
+    try {
+      const res = await fetch("/api/assistants");
+      const data = await res.json();
+      if (Array.isArray(data)) setAssistants(data);
+    } catch (e) {
+      console.error("Failed to fetch assistants:", e);
+    }
+  };
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (!currentConvId) {
+      setMessages([]);
+      return;
+    }
+    fetchMessages(currentConvId);
+
+    // Set model from conversation
+    const conv = conversations.find((c) => c.id === currentConvId);
+    if (conv) setModel(conv.current_model);
+  }, [currentConvId]);
+
+  const fetchMessages = async (convId: string) => {
+    try {
+      const res = await fetch(`/api/messages?conversation_id=${convId}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setMessages(data);
+    } catch (e) {
+      console.error("Failed to fetch messages:", e);
+    }
+  };
+
+  // Auto scroll
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -27,36 +80,190 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // Get current assistant's system prompt
+  const getCurrentSystemPrompt = () => {
+    if (!currentConvId) return "";
+    const conv = conversations.find((c) => c.id === currentConvId);
+    if (!conv?.assistant_id) return "";
+    const assistant = assistants.find((a) => a.id === conv.assistant_id);
+    return assistant?.system_prompt || "";
+  };
+
+  // Create new conversation
+  const handleNewConversation = async () => {
+    try {
+      const defaultAssistant = assistants[0];
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assistant_id: defaultAssistant?.id || null,
+          current_model: model,
+        }),
+      });
+      const conv = await res.json();
+      if (conv.id) {
+        await fetchConversations();
+        setCurrentConvId(conv.id);
+        setMessages([]);
+      }
+    } catch (e) {
+      console.error("Failed to create conversation:", e);
+    }
+  };
+
+  // Delete conversation
+  const handleDeleteConversation = async (id: string) => {
+    try {
+      await fetch("/api/conversations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (currentConvId === id) {
+        setCurrentConvId(null);
+        setMessages([]);
+      }
+      await fetchConversations();
+    } catch (e) {
+      console.error("Failed to delete conversation:", e);
+    }
+  };
+
+  // Rename conversation
+  const handleRename = async (id: string, title: string) => {
+    try {
+      await fetch("/api/conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, title }),
+      });
+      await fetchConversations();
+    } catch (e) {
+      console.error("Failed to rename:", e);
+    }
+  };
+
+  // Star/unstar
+  const handleStar = async (id: string, starred: boolean) => {
+    try {
+      await fetch("/api/conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, is_starred: starred }),
+      });
+      await fetchConversations();
+    } catch (e) {
+      console.error("Failed to star:", e);
+    }
+  };
+
+  // Model change
+  const handleModelChange = async (newModel: string) => {
+    setModel(newModel);
+    if (currentConvId) {
+      await fetch("/api/conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: currentConvId, current_model: newModel }),
+      });
+    }
+  };
+
+  // Save message to DB
+  const saveMessage = async (msg: {
+    conversation_id: string;
+    role: string;
+    content: string;
+    thinking_content?: string;
+    model_used?: string;
+  }) => {
+    try {
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(msg),
+      });
+    } catch (e) {
+      console.error("Failed to save message:", e);
+    }
+  };
+
+  // Auto-title based on first message
+  const autoTitle = async (convId: string, content: string) => {
+    const title = content.slice(0, 30) + (content.length > 30 ? "..." : "");
+    await handleRename(convId, title);
+  };
+
+  // Send message
   const handleSend = async (content: string) => {
-    // Add user message
+    // Auto-create conversation if none selected
+    let convId = currentConvId;
+    if (!convId) {
+      try {
+        const defaultAssistant = assistants[0];
+        const res = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            assistant_id: defaultAssistant?.id || null,
+            current_model: model,
+          }),
+        });
+        const conv = await res.json();
+        convId = conv.id;
+        setCurrentConvId(conv.id);
+        await fetchConversations();
+      } catch (e) {
+        console.error("Failed to create conversation:", e);
+        return;
+      }
+    }
+
+    // User message
     const userMsg: Message = {
       id: generateId(),
+      conversation_id: convId!,
       role: "user",
       content,
-      createdAt: new Date(),
+      created_at: new Date().toISOString(),
     };
 
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setIsStreaming(true);
 
-    // Prepare assistant message placeholder
+    // Save user message
+    saveMessage({ conversation_id: convId!, role: "user", content });
+
+    // Auto-title on first message
+    if (updatedMessages.filter((m) => m.role === "user").length === 1) {
+      autoTitle(convId!, content);
+    }
+
+    // Placeholder for assistant
     const assistantMsg: Message = {
       id: generateId(),
+      conversation_id: convId!,
       role: "assistant",
       content: "",
-      thinking: "",
-      model,
-      createdAt: new Date(),
+      thinking_content: "",
+      model_used: model,
+      created_at: new Date().toISOString(),
     };
-
     setMessages([...updatedMessages, assistantMsg]);
 
     // Build API messages
-    const apiMessages = updatedMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    const systemPrompt = getCurrentSystemPrompt();
+    const apiMessages: { role: string; content: string }[] = [];
+
+    if (systemPrompt) {
+      apiMessages.push({ role: "system", content: systemPrompt });
+    }
+
+    updatedMessages.forEach((m) => {
+      apiMessages.push({ role: m.role, content: m.content });
+    });
 
     try {
       abortRef.current = new AbortController();
@@ -64,11 +271,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: apiMessages,
-          model,
-          stream: true,
-        }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true }),
         signal: abortRef.current.signal,
       });
 
@@ -108,7 +311,6 @@ export default function ChatPage() {
             if (delta?.content) {
               let chunk = delta.content;
 
-              // Handle thinking tags
               if (chunk.includes("<thinking>")) {
                 inThinking = true;
                 chunk = chunk.replace("<thinking>", "");
@@ -116,7 +318,6 @@ export default function ChatPage() {
               if (chunk.includes("</thinking>")) {
                 inThinking = false;
                 chunk = chunk.replace("</thinking>", "");
-                // Remaining chunk after </thinking> is regular content
               }
 
               if (inThinking) {
@@ -132,7 +333,7 @@ export default function ChatPage() {
                   updated[updated.length - 1] = {
                     ...last,
                     content: fullContent,
-                    thinking: thinkingContent || undefined,
+                    thinking_content: thinkingContent || undefined,
                   };
                 }
                 return updated;
@@ -143,6 +344,15 @@ export default function ChatPage() {
           }
         }
       }
+
+      // Save assistant message to DB
+      saveMessage({
+        conversation_id: convId!,
+        role: "assistant",
+        content: fullContent,
+        thinking_content: thinkingContent || undefined,
+        model_used: model,
+      });
     } catch (error: unknown) {
       if (error instanceof Error && error.name === "AbortError") return;
 
@@ -151,10 +361,7 @@ export default function ChatPage() {
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last.role === "assistant") {
-          updated[updated.length - 1] = {
-            ...last,
-            content: `⚠️ 错误：${errorMessage}`,
-          };
+          updated[updated.length - 1] = { ...last, content: `⚠️ 错误：${errorMessage}` };
         }
         return updated;
       });
@@ -164,32 +371,67 @@ export default function ChatPage() {
     }
   };
 
-  const modelDisplayName = model.split("/").pop() || model;
-
   return (
-    <div className="h-screen flex flex-col" style={{ background: "var(--bg-primary)" }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
+      {/* Sidebar */}
+      <Sidebar
+        conversations={conversations}
+        currentId={currentConvId}
+        onSelect={setCurrentConvId}
+        onNew={handleNewConversation}
+        onDelete={handleDeleteConversation}
+        onRename={handleRename}
+        onStar={handleStar}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
       {/* Header */}
       <header
-        className="shrink-0 flex items-center justify-center px-5 py-3.5 border-b"
-        style={{ borderColor: "var(--border-subtle)" }}
+        style={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "10px 16px",
+          borderBottom: "1px solid var(--border-subtle)",
+        }}
       >
-        <div
-          className="text-xs px-3 py-1.5 rounded-lg font-medium"
-          style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--text-secondary)",
+            cursor: "pointer",
+            padding: "6px",
+            fontSize: "18px",
+          }}
         >
-          {modelDisplayName}
-        </div>
+          ☰
+        </button>
+
+        <ModelSelector currentModel={model} onChange={handleModelChange} />
+
+        <div style={{ width: "30px" }} />
       </header>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-5">
-        <div className="max-w-3xl mx-auto">
+      <main style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
+        <div style={{ maxWidth: "768px", margin: "0 auto" }}>
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "60vh",
+              gap: "12px",
+            }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-              <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
+              <p style={{ fontSize: "14px", color: "var(--text-tertiary)" }}>
                 发送一条消息开始对话
               </p>
             </div>
@@ -202,15 +444,15 @@ export default function ChatPage() {
               isStreaming={isStreaming && i === messages.length - 1 && msg.role === "assistant"}
             />
           ))}
-          <div ref={messagesEndRef} className="h-4" />
+          <div ref={messagesEndRef} style={{ height: "16px" }} />
         </div>
       </main>
 
       {/* Input */}
-      <footer className="shrink-0 px-5 pb-6 pt-3">
-        <div className="max-w-3xl mx-auto">
+      <footer style={{ flexShrink: 0, padding: "8px 16px 20px" }}>
+        <div style={{ maxWidth: "768px", margin: "0 auto" }}>
           <ChatInput onSend={handleSend} disabled={isStreaming} />
-          <p className="text-center text-xs mt-3" style={{ color: "var(--text-tertiary)" }}>
+          <p style={{ textAlign: "center", fontSize: "12px", marginTop: "10px", color: "var(--text-tertiary)" }}>
             AI 可能会犯错，请核实重要信息
           </p>
         </div>

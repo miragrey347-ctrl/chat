@@ -50,7 +50,7 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
         style={isUser ? { background: "var(--bg-message-user)" } : undefined}
       >
         {/* Thinking block */}
-        {message.thinking && (
+        {message.thinking_content && (
           <details className="mb-3">
             <summary
               className="cursor-pointer text-xs select-none py-1"
@@ -59,7 +59,7 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
               思维过程
             </summary>
             <div className="thinking-block mt-2 text-sm whitespace-pre-wrap">
-              {message.thinking}
+              {message.thinking_content}
             </div>
           </details>
         )}

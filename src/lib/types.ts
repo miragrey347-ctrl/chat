@@ -1,16 +1,35 @@
 export interface Message {
   id: string;
-  role: "user" | "assistant";
+  conversation_id: string;
+  role: "user" | "assistant" | "system";
   content: string;
-  thinking?: string;
-  model?: string;
-  inputTokens?: number;
-  outputTokens?: number;
-  createdAt: Date;
+  thinking_content?: string | null;
+  model_used?: string | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  created_at: string;
 }
 
-export interface ChatRequest {
-  messages: { role: string; content: string }[];
-  model: string;
-  stream: boolean;
+export interface Conversation {
+  id: string;
+  assistant_id: string | null;
+  title: string;
+  is_starred: boolean;
+  current_model: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Assistant {
+  id: string;
+  name: string;
+  tags: string;
+  avatar_url: string | null;
+  default_model: string;
+  stream_enabled: boolean;
+  system_prompt: string;
+  quick_messages: { name: string; content: string }[];
+  memory_enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }
