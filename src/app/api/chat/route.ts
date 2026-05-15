@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { messages, model, stream } = body;
+    const { messages, model, stream, caching } = body;
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
@@ -13,11 +13,51 @@ export async function POST(request: Request) {
       );
     }
 
-    const openRouterBody = {
+    // Transform messages for prompt caching (Anthropic models)
+    const isAnthropic = model?.startsWith("anthropic/");
+    let processedMessages = messages;
+
+    if (caching && isAnthropic && messages.length > 0) {
+      processedMessages = messages.map((msg: { role: string; content: string }, i: number) => {
+        if (msg.role === "system") {
+          return {
+            role: "system",
+            content: [
+              {
+                type: "text",
+                text: msg.content,
+                cache_control: { type: "ephemeral" },
+              },
+            ],
+          };
+        }
+        // Also cache the last user message before the new one for better hit rates
+        if (msg.role === "user" && i === messages.length - 2 && messages.length > 3) {
+          return {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: msg.content,
+                cache_control: { type: "ephemeral" },
+              },
+            ],
+          };
+        }
+        return msg;
+      });
+    }
+
+    const openRouterBody: Record<string, unknown> = {
       model: model || "anthropic/claude-sonnet-4",
-      messages,
+      messages: processedMessages,
       stream: stream ?? true,
     };
+
+    // Include usage stats in streaming
+    if (stream) {
+      openRouterBody.stream_options = { include_usage: true };
+    }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",

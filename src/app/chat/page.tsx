@@ -282,7 +282,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true }),
         signal: abortRef.current.signal,
       });
 
@@ -458,7 +458,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true }),
         signal: abortRef.current.signal,
       });
 
@@ -567,7 +567,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true }),
         signal: abortRef.current.signal,
       });
 
