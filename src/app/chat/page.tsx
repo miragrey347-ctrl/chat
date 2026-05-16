@@ -692,7 +692,7 @@ export default function ChatPage() {
 
   // Edit and resend: remove messages after index, send new content
   const handleEditResend = async (index: number, newContent: string) => {
-    if (!currentConvId) return;
+    if (!currentConvId || isStreaming) return;
 
     // Delete messages from DB (from edited index onward)
     const toDelete = messages.slice(index);
@@ -754,6 +754,7 @@ export default function ChatPage() {
       let fullContent = "";
       let thinkingContent = "";
       let inThinking = false;
+      let usageData: { prompt_tokens?: number; completion_tokens?: number } = {};
 
       while (true) {
         const { done, value } = await reader.read();
@@ -768,6 +769,12 @@ export default function ChatPage() {
           if (data === "[DONE]") continue;
           try {
             const parsed = JSON.parse(data);
+            if (parsed.usage) {
+              usageData = {
+                prompt_tokens: parsed.usage.prompt_tokens || parsed.usage.input_tokens,
+                completion_tokens: parsed.usage.completion_tokens || parsed.usage.output_tokens,
+              };
+            }
             const delta = parsed.choices?.[0]?.delta;
             if (delta?.content) {
               let chunk = delta.content;
@@ -793,6 +800,23 @@ export default function ChatPage() {
         content: fullContent,
         thinking_content: thinkingContent || undefined,
         model_used: model,
+        input_tokens: usageData.prompt_tokens || null,
+        output_tokens: usageData.completion_tokens || null,
+      });
+
+      // Update local message with token stats
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last.role === "assistant") {
+          updated[updated.length - 1] = {
+            ...last,
+            content: fullContent,
+            input_tokens: usageData.prompt_tokens || undefined,
+            output_tokens: usageData.completion_tokens || undefined,
+          };
+        }
+        return updated;
       });
     } catch (error: unknown) {
       if (error instanceof Error && error.name === "AbortError") return;
@@ -868,6 +892,7 @@ export default function ChatPage() {
       let fullContent = "";
       let thinkingContent = "";
       let inThinking = false;
+      let usageData: { prompt_tokens?: number; completion_tokens?: number } = {};
 
       while (true) {
         const { done, value } = await reader.read();
@@ -883,6 +908,12 @@ export default function ChatPage() {
           if (data === "[DONE]") continue;
           try {
             const parsed = JSON.parse(data);
+            if (parsed.usage) {
+              usageData = {
+                prompt_tokens: parsed.usage.prompt_tokens || parsed.usage.input_tokens,
+                completion_tokens: parsed.usage.completion_tokens || parsed.usage.output_tokens,
+              };
+            }
             const delta = parsed.choices?.[0]?.delta;
             if (delta?.content) {
               let chunk = delta.content;
@@ -909,6 +940,22 @@ export default function ChatPage() {
         content: fullContent,
         thinking_content: thinkingContent || undefined,
         model_used: model,
+        input_tokens: usageData.prompt_tokens || null,
+        output_tokens: usageData.completion_tokens || null,
+      });
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last.role === "assistant") {
+          updated[updated.length - 1] = {
+            ...last,
+            content: fullContent,
+            input_tokens: usageData.prompt_tokens || undefined,
+            output_tokens: usageData.completion_tokens || undefined,
+          };
+        }
+        return updated;
       });
     } catch (error: unknown) {
       if (error instanceof Error && error.name === "AbortError") return;

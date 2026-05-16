@@ -116,11 +116,16 @@ export default function ChatMessage({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
   const handleEditSubmit = () => {
+    if (editSubmitting) return;
     if (editContent.trim() && onEdit) {
+      setEditSubmitting(true);
       onEdit(editContent.trim());
     }
     setEditing(false);
+    setEditSubmitting(false);
   };
 
   // Determine if we should use markdown for this message
