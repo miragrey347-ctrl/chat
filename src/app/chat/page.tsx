@@ -561,7 +561,7 @@ export default function ChatPage() {
       let fullContent = "";
       let thinkingContent = "";
       let inThinking = false;
-      let usageData: { prompt_tokens?: number; completion_tokens?: number } = {};
+      let usageData: Record<string, unknown> = {};
 
       while (true) {
         const { done, value } = await reader.read();
@@ -581,19 +581,9 @@ export default function ChatPage() {
           try {
             const parsed = JSON.parse(data);
 
-            // Capture usage data (try multiple locations/field names)
+            // Capture usage data - keep full object to preserve cache details
             if (parsed.usage) {
-              usageData = {
-                prompt_tokens: parsed.usage.prompt_tokens || parsed.usage.input_tokens || usageData.prompt_tokens,
-                completion_tokens: parsed.usage.completion_tokens || parsed.usage.output_tokens || usageData.completion_tokens,
-              };
-            }
-            // Some providers put usage at top level
-            if (parsed.prompt_tokens || parsed.completion_tokens) {
-              usageData = {
-                prompt_tokens: parsed.prompt_tokens || usageData.prompt_tokens,
-                completion_tokens: parsed.completion_tokens || usageData.completion_tokens,
-              };
+              usageData = { ...usageData, ...parsed.usage };
             }
 
             const delta = parsed.choices?.[0]?.delta;
@@ -652,8 +642,8 @@ export default function ChatPage() {
         content: cleanedContent,
         thinking_content: thinkingContent || undefined,
         model_used: model,
-        input_tokens: usageData.prompt_tokens || null,
-        output_tokens: usageData.completion_tokens || null,
+        input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
+        output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
       });
 
       // Update local message with cleaned content, token stats, and cache info
@@ -664,8 +654,8 @@ export default function ChatPage() {
           updated[updated.length - 1] = {
             ...last,
             content: cleanedContent,
-            input_tokens: usageData.prompt_tokens || last.input_tokens,
-            output_tokens: usageData.completion_tokens || last.output_tokens,
+            input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || last.input_tokens,
+            output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || last.output_tokens,
             cache_status: cacheStatus || undefined,
             cached_tokens: cachedTokens || undefined,
           };
@@ -754,7 +744,7 @@ export default function ChatPage() {
       let fullContent = "";
       let thinkingContent = "";
       let inThinking = false;
-      let usageData: { prompt_tokens?: number; completion_tokens?: number } = {};
+      let usageData: Record<string, unknown> = {};
 
       while (true) {
         const { done, value } = await reader.read();
@@ -770,10 +760,7 @@ export default function ChatPage() {
           try {
             const parsed = JSON.parse(data);
             if (parsed.usage) {
-              usageData = {
-                prompt_tokens: parsed.usage.prompt_tokens || parsed.usage.input_tokens,
-                completion_tokens: parsed.usage.completion_tokens || parsed.usage.output_tokens,
-              };
+              usageData = { ...usageData, ...parsed.usage };
             }
             const delta = parsed.choices?.[0]?.delta;
             if (delta?.content) {
@@ -800,8 +787,8 @@ export default function ChatPage() {
         content: fullContent,
         thinking_content: thinkingContent || undefined,
         model_used: model,
-        input_tokens: usageData.prompt_tokens || null,
-        output_tokens: usageData.completion_tokens || null,
+        input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
+        output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
       });
 
       // Update local message with token stats
@@ -812,8 +799,8 @@ export default function ChatPage() {
           updated[updated.length - 1] = {
             ...last,
             content: fullContent,
-            input_tokens: usageData.prompt_tokens || undefined,
-            output_tokens: usageData.completion_tokens || undefined,
+            input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || undefined,
+            output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || undefined,
           };
         }
         return updated;
@@ -892,7 +879,7 @@ export default function ChatPage() {
       let fullContent = "";
       let thinkingContent = "";
       let inThinking = false;
-      let usageData: { prompt_tokens?: number; completion_tokens?: number } = {};
+      let usageData: Record<string, unknown> = {};
 
       while (true) {
         const { done, value } = await reader.read();
@@ -909,10 +896,7 @@ export default function ChatPage() {
           try {
             const parsed = JSON.parse(data);
             if (parsed.usage) {
-              usageData = {
-                prompt_tokens: parsed.usage.prompt_tokens || parsed.usage.input_tokens,
-                completion_tokens: parsed.usage.completion_tokens || parsed.usage.output_tokens,
-              };
+              usageData = { ...usageData, ...parsed.usage };
             }
             const delta = parsed.choices?.[0]?.delta;
             if (delta?.content) {
@@ -940,8 +924,8 @@ export default function ChatPage() {
         content: fullContent,
         thinking_content: thinkingContent || undefined,
         model_used: model,
-        input_tokens: usageData.prompt_tokens || null,
-        output_tokens: usageData.completion_tokens || null,
+        input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
+        output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
       });
 
       setMessages((prev) => {
@@ -951,8 +935,8 @@ export default function ChatPage() {
           updated[updated.length - 1] = {
             ...last,
             content: fullContent,
-            input_tokens: usageData.prompt_tokens || undefined,
-            output_tokens: usageData.completion_tokens || undefined,
+            input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || undefined,
+            output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || undefined,
           };
         }
         return updated;

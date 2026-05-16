@@ -79,7 +79,7 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="显示 Token 与上下文统计"
+          label="显示 Token 统计"
           value={settings.showTokenStats}
           onChange={() => toggle("showTokenStats")}
         />
