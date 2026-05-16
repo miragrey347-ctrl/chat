@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import type { Message } from "@/lib/types";
+import type { DisplaySettings } from "@/lib/useDisplaySettings";
 
 function CodeBlock({ children, className }: { children: string; className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -46,6 +47,7 @@ function formatTime(dateStr: string) {
 interface ChatMessageProps {
   message: Message;
   isStreaming?: boolean;
+  displaySettings?: DisplaySettings;
   onCopy?: () => void;
   onEdit?: (content: string) => void;
   onRegenerate?: () => void;
@@ -55,6 +57,7 @@ interface ChatMessageProps {
 export default function ChatMessage({
   message,
   isStreaming,
+  displaySettings,
   onEdit,
   onRegenerate,
   onDelete,
@@ -64,6 +67,23 @@ export default function ChatMessage({
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [copied, setCopied] = useState(false);
+
+  // Display settings with safe defaults
+  const ds = displaySettings || {
+    showTimestamps: true,
+    showTokenStats: true,
+    showCostEstimate: false,
+    showCacheStatus: false,
+    thinkingMarkdown: false,
+    userMarkdown: false,
+    assistantMarkdown: true,
+    latexRendering: true,
+    autoCollapseThinking: true,
+    showAvatars: false,
+    showNames: false,
+    showSidebar: true,
+    enterToNewline: true,
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
@@ -78,6 +98,59 @@ export default function ChatMessage({
     setEditing(false);
   };
 
+  // Determine if we should use markdown for this message
+  const useMarkdown = isUser ? ds.userMarkdown : ds.assistantMarkdown;
+  const useLatex = ds.latexRendering;
+
+  // Build remark/rehype plugins based on settings
+  const remarkPlugins: Array<typeof remarkGfm | typeof remarkMath> = [remarkGfm];
+  if (useLatex) remarkPlugins.push(remarkMath);
+  const rehypePlugins: Array<typeof rehypeKatex> = useLatex ? [rehypeKatex] : [];
+
+  // Render content based on settings
+  const renderContent = (content: string, isThinking?: boolean) => {
+    const shouldMarkdown = isThinking ? ds.thinkingMarkdown : useMarkdown;
+
+    if (!shouldMarkdown) {
+      return (
+        <div
+          style={{
+            fontSize: "14px",
+            whiteSpace: "pre-wrap",
+            color: isThinking ? "var(--text-tertiary)" : "var(--text-primary)",
+            fontStyle: isThinking ? "italic" : undefined,
+            lineHeight: 1.6,
+          }}
+        >
+          {content}
+        </div>
+      );
+    }
+
+    return (
+      <div className={`markdown-body ${!isThinking && isStreaming ? "streaming-cursor" : ""}`}>
+        <ReactMarkdown
+          remarkPlugins={remarkPlugins}
+          rehypePlugins={rehypePlugins}
+          components={{
+            code({ className, children, ...props }) {
+              const isBlock = className || (typeof children === "string" && children.includes("\n"));
+              if (isBlock) {
+                return <CodeBlock className={className}>{String(children)}</CodeBlock>;
+              }
+              return <code className={className} {...props}>{children}</code>;
+            },
+            pre({ children }) {
+              return <>{children}</>;
+            },
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
+  };
+
   return (
     <div
       style={{ padding: "12px 0" }}
@@ -86,15 +159,17 @@ export default function ChatMessage({
       onTouchStart={() => setShowActions(true)}
     >
       {/* Timestamp */}
-      <div style={{
-        fontSize: "11px",
-        color: "var(--text-tertiary)",
-        marginBottom: "4px",
-        textAlign: isUser ? "right" : "left",
-        opacity: 0.7,
-      }}>
-        {formatTime(message.created_at)}
-      </div>
+      {ds.showTimestamps && (
+        <div style={{
+          fontSize: "11px",
+          color: "var(--text-tertiary)",
+          marginBottom: "4px",
+          textAlign: isUser ? "right" : "left",
+          opacity: 0.7,
+        }}>
+          {formatTime(message.created_at)}
+        </div>
+      )}
 
       <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start" }}>
         <div
@@ -107,7 +182,10 @@ export default function ChatMessage({
         >
           {/* Thinking block */}
           {message.thinking_content && (
-            <details style={{ marginBottom: "12px" }}>
+            <details
+              style={{ marginBottom: "12px" }}
+              open={!ds.autoCollapseThinking}
+            >
               <summary style={{
                 cursor: "pointer",
                 fontSize: "12px",
@@ -121,13 +199,8 @@ export default function ChatMessage({
                 borderLeft: "2px solid var(--text-tertiary)",
                 paddingLeft: "12px",
                 marginTop: "8px",
-                fontSize: "13px",
-                color: "var(--text-tertiary)",
-                fontStyle: "italic",
-                whiteSpace: "pre-wrap",
-                lineHeight: 1.6,
               }}>
-                {message.thinking_content}
+                {renderContent(message.thinking_content, true)}
               </div>
             </details>
           )}
@@ -185,37 +258,14 @@ export default function ChatMessage({
                 </button>
               </div>
             </div>
-          ) : isUser ? (
-            <div style={{ fontSize: "14px", whiteSpace: "pre-wrap", color: "var(--text-primary)" }}>
-              {message.content}
-            </div>
           ) : (
-            <div className={`markdown-body ${isStreaming ? "streaming-cursor" : ""}`}>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex]}
-                components={{
-                  code({ className, children, ...props }) {
-                    const isBlock = className || (typeof children === "string" && children.includes("\n"));
-                    if (isBlock) {
-                      return <CodeBlock className={className}>{String(children)}</CodeBlock>;
-                    }
-                    return <code className={className} {...props}>{children}</code>;
-                  },
-                  pre({ children }) {
-                    return <>{children}</>;
-                  },
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
-            </div>
+            renderContent(message.content)
           )}
         </div>
       </div>
 
       {/* Token stats */}
-      {!isUser && !isStreaming && (message.input_tokens || message.output_tokens) && (
+      {ds.showTokenStats && !isUser && !isStreaming && (message.input_tokens || message.output_tokens) && (
         <div style={{
           fontSize: "11px",
           color: "var(--text-tertiary)",
@@ -228,6 +278,11 @@ export default function ChatMessage({
           {message.output_tokens && <span>输出: {message.output_tokens.toLocaleString()}</span>}
           {message.input_tokens && message.output_tokens && (
             <span>共: {(message.input_tokens + message.output_tokens).toLocaleString()}</span>
+          )}
+          {ds.showCostEstimate && message.input_tokens && message.output_tokens && (
+            <span style={{ color: "var(--accent)" }}>
+              ~${((message.input_tokens * 0.003 + message.output_tokens * 0.015) / 1000).toFixed(4)}
+            </span>
           )}
         </div>
       )}

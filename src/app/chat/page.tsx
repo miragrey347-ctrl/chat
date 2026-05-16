@@ -7,6 +7,7 @@ import ChatInput from "@/components/ChatInput";
 import Sidebar from "@/components/Sidebar";
 import ModelSelector from "@/components/ModelSelector";
 import AssistantManager from "@/components/AssistantManager";
+import { useDisplaySettings } from "@/lib/useDisplaySettings";
 import type { Message, Conversation, Assistant } from "@/lib/types";
 
 function generateId() {
@@ -15,6 +16,7 @@ function generateId() {
 
 export default function ChatPage() {
   const router = useRouter();
+  const displaySettings = useDisplaySettings();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -719,17 +721,19 @@ export default function ChatPage() {
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
       {/* Sidebar */}
-      <Sidebar
-        conversations={conversations}
-        currentId={currentConvId}
-        onSelect={setCurrentConvId}
-        onNew={handleNewConversation}
-        onDelete={handleDeleteConversation}
-        onRename={handleRename}
-        onStar={handleStar}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {displaySettings.showSidebar && (
+        <Sidebar
+          conversations={conversations}
+          currentId={currentConvId}
+          onSelect={setCurrentConvId}
+          onNew={handleNewConversation}
+          onDelete={handleDeleteConversation}
+          onRename={handleRename}
+          onStar={handleStar}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Header */}
       <header
@@ -742,19 +746,23 @@ export default function ChatPage() {
           borderBottom: "1px solid var(--border-subtle)",
         }}
       >
-        <button
-          onClick={() => setSidebarOpen(true)}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--text-secondary)",
-            cursor: "pointer",
-            padding: "6px",
-            fontSize: "18px",
-          }}
-        >
-          ☰
-        </button>
+        {displaySettings.showSidebar ? (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-secondary)",
+              cursor: "pointer",
+              padding: "6px",
+              fontSize: "18px",
+            }}
+          >
+            ☰
+          </button>
+        ) : (
+          <div style={{ width: "30px" }} />
+        )}
 
         <ModelSelector currentModel={model} onChange={handleModelChange} />
 
@@ -808,6 +816,7 @@ export default function ChatPage() {
               key={msg.id}
               message={msg}
               isStreaming={isStreaming && i === messages.length - 1 && msg.role === "assistant"}
+              displaySettings={displaySettings}
               onEdit={msg.role === "user" ? (newContent) => handleEditResend(i, newContent) : undefined}
               onRegenerate={msg.role === "assistant" && i === messages.length - 1 ? () => handleRegenerate() : undefined}
               onDelete={() => handleDeleteMessage(msg.id, i)}
@@ -848,7 +857,7 @@ export default function ChatPage() {
               </div>
             );
           })()}
-          <ChatInput onSend={handleSend} disabled={isStreaming} />
+          <ChatInput onSend={handleSend} disabled={isStreaming} enterToNewline={displaySettings.enterToNewline} />
           <p style={{ textAlign: "center", fontSize: "12px", marginTop: "10px", color: "var(--text-tertiary)" }}>
             AI 可能会犯错，请核实重要信息
           </p>

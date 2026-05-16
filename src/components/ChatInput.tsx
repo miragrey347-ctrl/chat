@@ -5,9 +5,10 @@ import { useState, useRef, useEffect } from "react";
 interface ChatInputProps {
   onSend: (content: string) => void;
   disabled?: boolean;
+  enterToNewline?: boolean;
 }
 
-export default function ChatInput({ onSend, disabled }: ChatInputProps) {
+export default function ChatInput({ onSend, disabled, enterToNewline = true }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -30,6 +31,20 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key !== "Enter") return;
+
+    if (enterToNewline) {
+      // Enter = newline (default), only send via button
+      return;
+    } else {
+      // Enter = send, Shift+Enter = newline
+      if (e.shiftKey) return;
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div
       style={{
@@ -43,6 +58,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
         ref={textareaRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder="发送消息..."
         rows={4}
         disabled={disabled}

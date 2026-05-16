@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
+import { notifyDisplaySettingsChanged } from "@/lib/useDisplaySettings";
 import SettingsPageLayout, {
   SettingsCard,
   SettingsToggleRow,
@@ -51,6 +52,7 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
     saveDisplaySettings(updated);
+    notifyDisplaySettingsChanged();
   };
 
   return (
