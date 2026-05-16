@@ -82,7 +82,7 @@ export default function Sidebar({
           top: 0,
           left: 0,
           bottom: 0,
-          width: "300px",
+          width: "min(300px, 85vw)",
           background: "var(--bg-secondary)",
           borderRight: "1px solid var(--border-subtle)",
           zIndex: 50,

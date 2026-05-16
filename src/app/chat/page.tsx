@@ -984,7 +984,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
       {/* Sidebar */}
       {displaySettings.showSidebar && (
         <Sidebar
@@ -1008,6 +1008,7 @@ export default function ChatPage() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "10px 16px",
+          paddingTop: "max(10px, env(safe-area-inset-top))",
           borderBottom: "1px solid var(--border-subtle)",
         }}
       >
@@ -1325,7 +1326,7 @@ export default function ChatPage() {
       </main>
 
       {/* Input */}
-      <footer style={{ flexShrink: 0, padding: "8px 16px 20px" }}>
+      <footer style={{ flexShrink: 0, padding: "8px 16px", paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
         <div style={{ maxWidth: "768px", margin: "0 auto" }}>
           {/* Quick messages */}
           {(() => {

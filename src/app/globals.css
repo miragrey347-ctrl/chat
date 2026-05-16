@@ -122,3 +122,38 @@ html, body {
 /* Streaming cursor */
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 .streaming-cursor::after { content: "▊"; animation: blink 1s infinite; color: var(--accent); margin-left: 2px; }
+
+/* ── Responsive ── */
+
+/* Safe area padding */
+html, body {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Touch optimization */
+button, [role="button"], select, input, textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Phone (< 480px) */
+@media (max-width: 480px) {
+  .markdown-body { font-size: 14px; line-height: 1.6; }
+  .markdown-body pre { font-size: 12px; padding: 0.75em; margin-left: -8px; margin-right: -8px; border-radius: 0; }
+  .markdown-body table { font-size: 13px; }
+  .markdown-body th, .markdown-body td { padding: 0.35em 0.5em; }
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Prevent overscroll bounce */
+html {
+  overscroll-behavior: none;
+}
