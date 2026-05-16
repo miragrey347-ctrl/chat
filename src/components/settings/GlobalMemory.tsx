@@ -24,6 +24,9 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
   const [editContent, setEditContent] = useState("");
 
   useEffect(() => {
+    // Load enabled state from localStorage
+    const saved = localStorage.getItem("global-memory-enabled");
+    if (saved !== null) setEnabled(saved !== "false");
     fetchMemories();
   }, []);
 
@@ -87,7 +90,10 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
           label="启用全局记忆"
           description="全局记忆中的内容会注入到所有助手的系统提示词中。适合存放通用的个人信息。"
           value={enabled}
-          onChange={setEnabled}
+          onChange={(v) => {
+            setEnabled(v);
+            localStorage.setItem("global-memory-enabled", String(v));
+          }}
         />
       </SettingsCard>
 

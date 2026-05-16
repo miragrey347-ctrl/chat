@@ -27,6 +27,7 @@ export default function ChatPage() {
   const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const prevConvIdRef = useRef<string | null>(null);
 
   // Load conversations and assistants on mount
   useEffect(() => {
@@ -86,9 +87,19 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Get current assistant's system prompt
+  // ── Memory System ──
   const [globalMemories, setGlobalMemories] = useState<{ id: string; content: string }[]>([]);
   const [assistantMemories, setAssistantMemories] = useState<{ id: string; content: string }[]>([]);
+  const [historySummaries, setHistorySummaries] = useState<{ summary: string; created_at: string }[]>([]);
+
+  // Check if global memory is enabled (stored in localStorage)
+  const isGlobalMemoryEnabled = useCallback(() => {
+    try {
+      return localStorage.getItem("global-memory-enabled") !== "false";
+    } catch {
+      return true;
+    }
+  }, []);
 
   // Fetch global memories on mount
   useEffect(() => {
@@ -111,6 +122,12 @@ export default function ChatPage() {
     } else {
       setAssistantMemories([]);
     }
+    // Fetch history summaries if enabled
+    if (assistant?.history_reference_enabled && assistant?.id) {
+      fetchHistorySummaries(assistant.id, assistant.history_reference_count || 5);
+    } else {
+      setHistorySummaries([]);
+    }
   }, [currentConvId, conversations, assistants]);
 
   const fetchAssistantMemories = async (assistantId: string) => {
@@ -121,6 +138,38 @@ export default function ChatPage() {
     } catch (e) { console.error("Failed to fetch assistant memories:", e); }
   };
 
+  const fetchHistorySummaries = async (assistantId: string, count: number) => {
+    try {
+      const res = await fetch(`/api/summaries?assistant_id=${assistantId}&limit=${count}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setHistorySummaries(data);
+    } catch (e) { console.error("Failed to fetch history summaries:", e); }
+  };
+
+  // Generate summary for previous conversation when switching
+  useEffect(() => {
+    const prevId = prevConvIdRef.current;
+    prevConvIdRef.current = currentConvId;
+
+    if (prevId && prevId !== currentConvId) {
+      const prevConv = conversations.find((c) => c.id === prevId);
+      if (prevConv?.assistant_id) {
+        const assistant = assistants.find((a) => a.id === prevConv.assistant_id);
+        if (assistant?.history_reference_enabled) {
+          // Fire and forget - generate summary in background
+          fetch("/api/summaries", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversation_id: prevId,
+              assistant_id: prevConv.assistant_id,
+            }),
+          }).catch((e) => console.error("Summary generation failed:", e));
+        }
+      }
+    }
+  }, [currentConvId]);
+
   // Raw helper (no dependency on state setters)
   const getCurrentAssistantRaw = (): Assistant | null => {
     if (!currentConvId) return assistants[0] || null;
@@ -129,26 +178,107 @@ export default function ChatPage() {
     return assistants.find((a) => a.id === conv.assistant_id) || null;
   };
 
+  // Build system prompt following spec injection order:
+  // 1. Assistant system_prompt
+  // 2. Global memories (if enabled + has content)
+  // 3. Assistant memories (if enabled + has content)
+  // 4. Memory extraction instruction (if assistant memory enabled)
+  // 5. History summaries (if enabled + has content)
   const getCurrentSystemPrompt = () => {
     const conv = conversations.find((c) => c.id === currentConvId);
     const assistant = conv?.assistant_id ? assistants.find((a) => a.id === conv.assistant_id) : null;
-    let prompt = assistant?.system_prompt || "";
+    const parts: string[] = [];
 
-    // Inject memories
-    const memoryParts: string[] = [];
-    if (globalMemories.length > 0) {
-      memoryParts.push("## 全局记忆\n" + globalMemories.map((m) => "- " + m.content).join("\n"));
+    // Layer 1: Assistant system prompt
+    if (assistant?.system_prompt) {
+      parts.push(assistant.system_prompt);
     }
+
+    // Layer 2: Global memories
+    if (isGlobalMemoryEnabled() && globalMemories.length > 0) {
+      parts.push("\n\n[全局记忆]");
+      globalMemories.forEach((m) => parts.push(`- ${m.content}`));
+      parts.push("[全局记忆结束]");
+    }
+
+    // Layer 3: Assistant memories
     if (assistant?.memory_enabled && assistantMemories.length > 0) {
-      memoryParts.push("## 助手记忆\n" + assistantMemories.map((m) => "- " + m.content).join("\n"));
+      parts.push("\n\n[助手记忆]");
+      assistantMemories.forEach((m) => parts.push(`- ${m.content}`));
+      parts.push("[助手记忆结束]");
     }
 
-    if (memoryParts.length > 0) {
-      const memoryBlock = "\n\n<memories>\n" + memoryParts.join("\n\n") + "\n</memories>";
-      prompt = prompt ? prompt + memoryBlock : memoryBlock;
+    // Layer 4: Memory extraction instruction
+    if (assistant?.memory_enabled) {
+      const instruction = assistant.memory_system_instruction ||
+        "当你在对话中发现用户的重要个人信息、偏好、习惯、经历或任何值得长期记住的内容时，请在回复末尾用以下格式标记：\n<memory_save>要记住的内容</memory_save>\n该标记不会显示给用户，系统会自动提取并存入记忆库。";
+      parts.push("\n\n" + instruction);
     }
 
-    return prompt;
+    // Layer 5: History summaries
+    if (assistant?.history_reference_enabled && historySummaries.length > 0) {
+      parts.push("\n\n[近期对话参考]");
+      historySummaries.forEach((s) => {
+        const dateStr = new Date(s.created_at).toLocaleDateString("zh-CN");
+        parts.push(`对话（${dateStr}）：${s.summary}`);
+      });
+      parts.push("[近期对话参考结束]");
+    }
+
+    return parts.join("\n");
+  };
+
+  // Process <memory_save> tags from assistant response
+  const processMemorySave = async (content: string, assistantId: string): Promise<string> => {
+    const memoryRegex = /<memory_save>([\s\S]*?)<\/memory_save>/g;
+    const memories: string[] = [];
+    let match;
+
+    while ((match = memoryRegex.exec(content)) !== null) {
+      memories.push(match[1].trim());
+    }
+
+    if (memories.length > 0) {
+      // Save each extracted memory
+      for (const memContent of memories) {
+        try {
+          await fetch("/api/memories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              assistant_id: assistantId,
+              content: memContent,
+              source: "auto",
+            }),
+          });
+        } catch (e) {
+          console.error("Failed to save auto memory:", e);
+        }
+      }
+      // Refresh assistant memories
+      fetchAssistantMemories(assistantId);
+    }
+
+    // Remove tags from display content
+    return content.replace(memoryRegex, "").trim();
+  };
+
+  // Extract cache info from usage data
+  const extractCacheInfo = (usage: Record<string, unknown>): { cacheStatus: string; cachedTokens: number } => {
+    const details = (usage?.prompt_tokens_details || {}) as Record<string, number>;
+    const cachedTokens = details.cached_tokens || 0;
+    const cacheWriteTokens = details.cache_write_tokens || 0;
+    const totalInputTokens = (usage?.prompt_tokens as number) || 0;
+
+    let cacheStatus = "";
+    if (cachedTokens > 0) {
+      const hitRate = totalInputTokens > 0 ? ((cachedTokens / totalInputTokens) * 100).toFixed(1) : "0";
+      cacheStatus = `缓存命中：${cachedTokens} tokens（命中率 ${hitRate}%）`;
+    } else if (cacheWriteTokens > 0) {
+      cacheStatus = `缓存写入：${cacheWriteTokens} tokens`;
+    }
+
+    return { cacheStatus, cachedTokens };
   };
 
   const getCurrentAssistant = (): Assistant | null => {
@@ -420,32 +550,43 @@ export default function ChatPage() {
         }
       }
 
+      // Process <memory_save> tags if assistant memory is enabled
+      const assistant = getCurrentAssistantRaw();
+      let cleanedContent = fullContent;
+      if (assistant?.memory_enabled && assistant?.id) {
+        cleanedContent = await processMemorySave(fullContent, assistant.id);
+      }
+
+      // Extract cache status
+      const { cacheStatus, cachedTokens } = extractCacheInfo(usageData as Record<string, unknown>);
+
       // Save assistant message to DB with token stats
       saveMessage({
         conversation_id: convId!,
         role: "assistant",
-        content: fullContent,
+        content: cleanedContent,
         thinking_content: thinkingContent || undefined,
         model_used: model,
         input_tokens: usageData.prompt_tokens || null,
         output_tokens: usageData.completion_tokens || null,
       });
 
-      // Update local message with token stats
-      if (usageData.prompt_tokens || usageData.completion_tokens) {
-        setMessages((prev) => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last.role === "assistant") {
-            updated[updated.length - 1] = {
-              ...last,
-              input_tokens: usageData.prompt_tokens,
-              output_tokens: usageData.completion_tokens,
-            };
-          }
-          return updated;
-        });
-      }
+      // Update local message with cleaned content, token stats, and cache info
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last.role === "assistant") {
+          updated[updated.length - 1] = {
+            ...last,
+            content: cleanedContent,
+            input_tokens: usageData.prompt_tokens || last.input_tokens,
+            output_tokens: usageData.completion_tokens || last.output_tokens,
+            cache_status: cacheStatus || undefined,
+            cached_tokens: cachedTokens || undefined,
+          };
+        }
+        return updated;
+      });
     } catch (error: unknown) {
       if (error instanceof Error && error.name === "AbortError") return;
 

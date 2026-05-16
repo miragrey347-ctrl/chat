@@ -7,6 +7,8 @@ export interface Message {
   model_used?: string | null;
   input_tokens?: number | null;
   output_tokens?: number | null;
+  cache_status?: string | null;
+  cached_tokens?: number | null;
   created_at: string;
 }
 
@@ -30,6 +32,9 @@ export interface Assistant {
   system_prompt: string;
   quick_messages: { name: string; content: string }[];
   memory_enabled: boolean;
+  memory_system_instruction?: string | null;
+  history_reference_enabled?: boolean;
+  history_reference_count?: number;
   created_at: string;
   updated_at: string;
 }
