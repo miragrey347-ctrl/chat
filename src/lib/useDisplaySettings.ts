@@ -49,30 +49,50 @@ function loadSettings(): DisplaySettings {
 export function useDisplaySettings() {
   const [settings, setSettings] = useState<DisplaySettings>(DISPLAY_DEFAULTS);
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     setSettings(loadSettings());
+  }, []);
 
-    // Listen for changes from settings page (same tab)
-    const handleStorage = () => {
-      setSettings(loadSettings());
+  useEffect(() => {
+    // Read on mount
+    refresh();
+
+    // Re-read when page becomes visible (handles Next.js router cache)
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
     };
 
-    // Custom event for same-tab updates
-    window.addEventListener("display-settings-changed", handleStorage);
-    // storage event for cross-tab
-    window.addEventListener("storage", (e) => {
-      if (e.key === STORAGE_KEY) handleStorage();
-    });
+    // Re-read on window focus (handles tab switching & navigation back)
+    const handleFocus = () => refresh();
+
+    // Custom event for same-page updates
+    const handleCustom = () => refresh();
+
+    // Storage event for cross-tab updates
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) refresh();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("display-settings-changed", handleCustom);
+    window.addEventListener("storage", handleStorage);
+
+    // Also poll on a short interval as ultimate fallback for route changes
+    const poll = setInterval(refresh, 2000);
 
     return () => {
-      window.removeEventListener("display-settings-changed", handleStorage);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("display-settings-changed", handleCustom);
+      window.removeEventListener("storage", handleStorage);
+      clearInterval(poll);
     };
-  }, []);
+  }, [refresh]);
 
   return settings;
 }
 
-// Call this after saving settings to notify other components in the same tab
 export function notifyDisplaySettingsChanged() {
   window.dispatchEvent(new Event("display-settings-changed"));
 }
