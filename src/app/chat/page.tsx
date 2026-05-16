@@ -25,6 +25,7 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [assistantManagerOpen, setAssistantManagerOpen] = useState(false);
   const [showAssistantPicker, setShowAssistantPicker] = useState(false);
+  const [showExportPicker, setShowExportPicker] = useState(false);
   const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -898,6 +899,92 @@ export default function ChatPage() {
     setMessages(updated);
   };
 
+  // ── Export conversation ──
+  const getConvTitle = () => {
+    const conv = conversations.find((c) => c.id === currentConvId);
+    return conv?.title || "对话";
+  };
+
+  const triggerDownload = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const formatTimestamp = (ts: string) => {
+    const d = new Date(ts);
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const exportAs = (format: "md" | "json" | "txt") => {
+    if (messages.length === 0) return;
+    setShowExportPicker(false);
+
+    const title = getConvTitle();
+    const assistant = getCurrentAssistant();
+    const safeTitle = title.replace(/[/\\?%*:|"<>]/g, "_").slice(0, 50);
+
+    if (format === "json") {
+      const data = {
+        title,
+        assistant: assistant?.name || null,
+        model,
+        exported_at: new Date().toISOString(),
+        messages: messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          thinking_content: m.thinking_content || undefined,
+          model_used: m.model_used || undefined,
+          input_tokens: m.input_tokens || undefined,
+          output_tokens: m.output_tokens || undefined,
+          created_at: m.created_at,
+        })),
+      };
+      triggerDownload(JSON.stringify(data, null, 2), `${safeTitle}.json`, "application/json");
+      return;
+    }
+
+    if (format === "md") {
+      let md = `# ${title}\n\n`;
+      if (assistant) md += `**助手**：${assistant.name}　**模型**：${model}\n\n---\n\n`;
+      messages.forEach((m) => {
+        const time = formatTimestamp(m.created_at);
+        if (m.role === "user") {
+          md += `### 🧑 用户　${time}\n\n${m.content}\n\n`;
+        } else if (m.role === "assistant") {
+          md += `### 🤖 助手　${time}\n\n`;
+          if (m.thinking_content) {
+            md += `<details><summary>思维过程</summary>\n\n${m.thinking_content}\n\n</details>\n\n`;
+          }
+          md += `${m.content}\n\n`;
+          if (m.input_tokens || m.output_tokens) {
+            md += `> 输入: ${m.input_tokens?.toLocaleString() || "-"} · 输出: ${m.output_tokens?.toLocaleString() || "-"}\n\n`;
+          }
+        }
+        md += "---\n\n";
+      });
+      triggerDownload(md, `${safeTitle}.md`, "text/markdown");
+      return;
+    }
+
+    // txt
+    let txt = `${title}\n${"=".repeat(title.length)}\n\n`;
+    if (assistant) txt += `助手：${assistant.name}　模型：${model}\n\n`;
+    messages.forEach((m) => {
+      const time = formatTimestamp(m.created_at);
+      const role = m.role === "user" ? "用户" : "助手";
+      txt += `[${role}] ${time}\n${m.content}\n\n`;
+    });
+    triggerDownload(txt, `${safeTitle}.txt`, "text/plain");
+  };
+
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
       {/* Sidebar */}
@@ -964,19 +1051,39 @@ export default function ChatPage() {
           <ModelSelector currentModel={model} onChange={handleModelChange} />
         </div>
 
-        <button
-          onClick={() => router.push("/settings")}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--text-secondary)",
-            cursor: "pointer",
-            padding: "6px",
-            fontSize: "16px",
-          }}
-        >
-          ⚙
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          {/* Export button - only show when there are messages */}
+          {messages.length > 0 && (
+            <button
+              onClick={() => setShowExportPicker(true)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                padding: "6px",
+                fontSize: "15px",
+                touchAction: "manipulation",
+              }}
+            >
+              ↓
+            </button>
+          )}
+          <button
+            onClick={() => router.push("/settings")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-secondary)",
+              cursor: "pointer",
+              padding: "6px",
+              fontSize: "16px",
+              touchAction: "manipulation",
+            }}
+          >
+            ⚙
+          </button>
+        </div>
       </header>
 
       {/* Assistant Picker */}
@@ -1084,6 +1191,93 @@ export default function ChatPage() {
               to { transform: translateY(0); }
             }
           `}</style>
+        </>
+      )}
+
+      {/* Export Picker */}
+      {showExportPicker && (
+        <>
+          <div
+            onClick={() => setShowExportPicker(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.5)",
+              zIndex: 200,
+            }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: "var(--bg-secondary)",
+              borderRadius: "16px 16px 0 0",
+              padding: "24px 20px",
+              paddingBottom: "max(24px, env(safe-area-inset-bottom))",
+              zIndex: 210,
+              animation: "sheet-up 250ms ease",
+            }}
+          >
+            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+              导出对话
+            </h3>
+            <p style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "16px" }}>
+              {getConvTitle()} · {messages.length} 条消息
+            </p>
+            {([
+              { format: "md" as const, label: "Markdown", desc: "保留格式和思维链，适合阅读和存档", icon: "📝" },
+              { format: "json" as const, label: "JSON", desc: "完整结构化数据，含 token 统计，适合备份", icon: "🔧" },
+              { format: "txt" as const, label: "纯文本", desc: "最简格式，兼容性最好", icon: "📄" },
+            ]).map((opt) => (
+              <button
+                key={opt.format}
+                onClick={() => exportAs(opt.format)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "14px 12px",
+                  borderRadius: "10px",
+                  marginBottom: "6px",
+                  background: "var(--bg-tertiary)",
+                  border: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  touchAction: "manipulation",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>{opt.icon}</span>
+                <div>
+                  <div style={{ fontSize: "15px", fontWeight: 500, color: "var(--text-primary)" }}>
+                    {opt.label}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                    {opt.desc}
+                  </div>
+                </div>
+              </button>
+            ))}
+            <button
+              onClick={() => setShowExportPicker(false)}
+              style={{
+                width: "100%",
+                padding: "14px",
+                marginTop: "10px",
+                borderRadius: "12px",
+                border: "none",
+                background: "var(--bg-hover)",
+                color: "var(--text-primary)",
+                fontSize: "15px",
+                cursor: "pointer",
+                touchAction: "manipulation",
+              }}
+            >
+              取消
+            </button>
+          </div>
         </>
       )}
 
