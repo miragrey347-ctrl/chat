@@ -154,7 +154,7 @@ export default function ChatPage() {
     } else {
       setHistorySummaries([]);
     }
-  }, [currentConvId, conversations, assistants]);
+  }, [currentConvId, conversations, assistants, pendingAssistantId]);
 
   const fetchAssistantMemories = async (assistantId: string) => {
     try {

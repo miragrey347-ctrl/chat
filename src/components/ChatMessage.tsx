@@ -301,24 +301,20 @@ export default function ChatMessage({
           color: "var(--text-tertiary)",
           marginTop: "8px",
           display: "flex",
-          flexDirection: "column",
-          gap: "2px",
+          gap: "10px",
+          flexWrap: "wrap",
           opacity: 0.7,
         }}>
-          <div style={{ display: "flex", gap: "12px" }}>
-            {message.input_tokens && <span>输入: {message.input_tokens.toLocaleString()}</span>}
-            {message.output_tokens && <span>输出: {message.output_tokens.toLocaleString()}</span>}
-            {message.input_tokens && message.output_tokens && (
-              <span>共: {(message.input_tokens + message.output_tokens).toLocaleString()}</span>
-            )}
-            {ds.showCostEstimate && message.input_tokens && message.output_tokens && (
-              <span style={{ color: "var(--accent)" }}>
-                ~${((message.input_tokens * 0.003 + message.output_tokens * 0.015) / 1000).toFixed(4)}
-              </span>
-            )}
-          </div>
+          <span>
+            {((message.input_tokens || 0) + (message.output_tokens || 0)).toLocaleString()} tokens
+          </span>
+          {ds.showCostEstimate && message.input_tokens && message.output_tokens && (
+            <span style={{ color: "var(--accent)" }}>
+              ~${((message.input_tokens * 0.003 + message.output_tokens * 0.015) / 1000).toFixed(4)}
+            </span>
+          )}
           {ds.showCacheStatus && message.cache_status && (
-            <div>{message.cache_status}</div>
+            <span>{message.cache_status}</span>
           )}
         </div>
       )}
