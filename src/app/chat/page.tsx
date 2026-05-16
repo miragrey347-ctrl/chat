@@ -62,9 +62,10 @@ export default function ChatPage() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setAssistants(data);
-        // Set default model from first assistant if no conversation selected
+        // Set defaults from first assistant if no conversation selected
         if (!currentConvId && data.length > 0) {
           setModel(data[0].default_model);
+          setPendingAssistantId(data[0].id);
         }
       }
     } catch (e) {
@@ -91,6 +92,7 @@ export default function ChatPage() {
         ? assistants.find((a) => a.id === conv.assistant_id)
         : null;
       setModel(conv.current_model || assistant?.default_model || "anthropic/claude-sonnet-4");
+      if (conv.assistant_id) setPendingAssistantId(conv.assistant_id);
     }
   }, [currentConvId]);
 
