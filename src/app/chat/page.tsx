@@ -49,7 +49,13 @@ export default function ChatPage() {
     try {
       const res = await fetch("/api/assistants");
       const data = await res.json();
-      if (Array.isArray(data)) setAssistants(data);
+      if (Array.isArray(data)) {
+        setAssistants(data);
+        // Set default model from first assistant if no conversation selected
+        if (!currentConvId && data.length > 0) {
+          setModel(data[0].default_model);
+        }
+      }
     } catch (e) {
       console.error("Failed to fetch assistants:", e);
     }
@@ -59,13 +65,22 @@ export default function ChatPage() {
   useEffect(() => {
     if (!currentConvId) {
       setMessages([]);
+      // When no conversation, use first assistant's default model
+      if (assistants.length > 0) {
+        setModel(assistants[0].default_model);
+      }
       return;
     }
     fetchMessages(currentConvId);
 
-    // Set model from conversation
+    // Set model: prefer conversation's saved model, fall back to assistant's default
     const conv = conversations.find((c) => c.id === currentConvId);
-    if (conv) setModel(conv.current_model);
+    if (conv) {
+      const assistant = conv.assistant_id
+        ? assistants.find((a) => a.id === conv.assistant_id)
+        : null;
+      setModel(conv.current_model || assistant?.default_model || "anthropic/claude-sonnet-4");
+    }
   }, [currentConvId]);
 
   const fetchMessages = async (convId: string) => {

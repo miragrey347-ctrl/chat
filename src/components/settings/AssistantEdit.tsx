@@ -97,21 +97,26 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
         name: name.trim(),
         tags: tags.trim(),
         default_model: defaultModel,
-        stream_enabled: streamEnabled,
         system_prompt: systemPrompt,
         quick_messages: quickMsgs.filter((q) => q.name.trim() && q.content.trim()),
         memory_enabled: memoryEnabled,
         history_reference_enabled: historyRefEnabled,
         history_reference_count: historyRefCount,
       };
-      await fetch("/api/assistants", {
+      const res = await fetch("/api/assistants", {
         method: assistantId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        alert("保存失败：" + (err.error || res.status));
+        return;
+      }
       nav.pop();
     } catch (e) {
       console.error("Failed to save assistant:", e);
+      alert("保存失败，请重试");
     } finally {
       setSaving(false);
     }
@@ -195,6 +200,10 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
               paddingRight: "36px",
             }}
           >
+            {/* Always include current model if not in list */}
+            {models.length > 0 && !models.some((m) => m.model_id === defaultModel) && (
+              <option value={defaultModel}>{defaultModel}</option>
+            )}
             {models.length > 0 ? (
               models.map((m) => (
                 <option key={m.model_id} value={m.model_id}>
