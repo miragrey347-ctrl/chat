@@ -57,19 +57,18 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
     fetchMemories();
   };
 
-  const addMemoriesFromFile = async (memories: string[]) => {
+  const addFileMemory = async (filename: string, content: string) => {
     if (!assistantId) return;
-    for (const content of memories) {
-      await fetch("/api/memories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assistant_id: assistantId,
-          content,
-          source: "file",
-        }),
-      });
-    }
+    const memContent = `[文件: ${filename}]\n${content}`;
+    await fetch("/api/memories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assistant_id: assistantId,
+        content: memContent,
+        source: "file",
+      }),
+    });
     fetchMemories();
   };
 
@@ -150,7 +149,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
         </div>
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>
-          <FileUploadMemory onConfirm={addMemoriesFromFile} />
+          <FileUploadMemory onFileAdd={addFileMemory} />
         </div>
       </SettingsCard>
 
@@ -242,28 +241,41 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
                 </div>
               ) : (
                 <>
-                  <span style={{ flex: 1, fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5 }}>
-                    {m.content}
+                  <span style={{ flex: 1, fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, overflow: "hidden" }}>
+                    {m.source === "file" && m.content.startsWith("[文件:") ? (
+                      <>
+                        <div style={{ fontWeight: 500, marginBottom: "2px" }}>
+                          📄 {m.content.split("]\n")[0].replace("[文件: ", "")}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "var(--text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "400px" }}>
+                          {m.content.split("]\n").slice(1).join("").slice(0, 80)}...
+                        </div>
+                      </>
+                    ) : (
+                      m.content
+                    )}
                   </span>
                   <span style={{ fontSize: "11px", color: "var(--text-tertiary)", flexShrink: 0, marginTop: "2px" }}>
                     {m.source === "manual" ? "手动" : m.source === "file" ? "文件" : m.source === "auto" ? "自动" : m.source}
                   </span>
-                  <button
-                    onClick={() => {
-                      setEditingId(m.id);
-                      setEditContent(m.content);
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "var(--text-tertiary)",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    ✎
-                  </button>
+                  {m.source !== "file" && (
+                    <button
+                      onClick={() => {
+                        setEditingId(m.id);
+                        setEditContent(m.content);
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--text-tertiary)",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        flexShrink: 0,
+                      }}
+                    >
+                      ✎
+                    </button>
+                  )}
                   <button
                     onClick={() => deleteMemory(m.id)}
                     style={{

@@ -25,6 +25,11 @@ export async function POST(request: Request) {
       system_prompt: body.system_prompt || "",
       default_model: body.default_model || "anthropic/claude-sonnet-4",
       tags: body.tags || "",
+      quick_messages: body.quick_messages || [],
+      memory_enabled: body.memory_enabled || false,
+      memory_system_instruction: body.memory_system_instruction || null,
+      history_reference_enabled: body.history_reference_enabled || false,
+      history_reference_count: body.history_reference_count || 5,
     })
     .select()
     .single();
@@ -37,9 +42,19 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const supabase = createServiceClient();
   const body = await request.json();
-  const { id, ...updates } = body;
+  const { id } = body;
 
-  updates.updated_at = new Date().toISOString();
+  // Whitelist only valid DB columns
+  const allowedFields = [
+    "name", "tags", "system_prompt", "default_model",
+    "quick_messages", "memory_enabled",
+    "memory_system_instruction",
+    "history_reference_enabled", "history_reference_count",
+  ];
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  for (const key of allowedFields) {
+    if (key in body) updates[key] = body[key];
+  }
 
   const { data, error } = await supabase
     .from("assistants")
