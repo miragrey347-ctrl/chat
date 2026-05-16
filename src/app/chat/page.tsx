@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import Sidebar from "@/components/Sidebar";
@@ -13,6 +14,7 @@ function generateId() {
 }
 
 export default function ChatPage() {
+  const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -757,7 +759,7 @@ export default function ChatPage() {
         <ModelSelector currentModel={model} onChange={handleModelChange} />
 
         <button
-          onClick={() => setAssistantManagerOpen(true)}
+          onClick={() => router.push("/settings")}
           style={{
             background: "none",
             border: "none",
