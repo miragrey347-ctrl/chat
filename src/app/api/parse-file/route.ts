@@ -9,7 +9,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Extract text based on file type
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
     let rawText = "";
 
@@ -21,6 +20,20 @@ export async function POST(request: Request) {
       case "json":
         try {
           const json = JSON.parse(await file.text());
+          // If array of strings, use directly
+          if (Array.isArray(json)) {
+            const memories = json
+              .map((item) => (typeof item === "string" ? item : JSON.stringify(item)))
+              .filter((s: string) => s.trim().length > 0);
+            return NextResponse.json({ filename: file.name, memories });
+          }
+          // If object, convert key-value pairs to entries
+          if (typeof json === "object" && json !== null) {
+            const memories = Object.entries(json).map(
+              ([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`
+            );
+            return NextResponse.json({ filename: file.name, memories });
+          }
           rawText = JSON.stringify(json, null, 2);
         } catch {
           rawText = await file.text();
@@ -37,71 +50,57 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "文件内容为空" }, { status: 400 });
     }
 
-    // Truncate if too long (keep under ~4000 tokens for Haiku)
-    const maxChars = 8000;
-    if (rawText.length > maxChars) {
-      rawText = rawText.slice(0, maxChars) + "\n...(内容已截断)";
+    // Split text into memory entries by paragraphs (double newline) or single lines
+    const memories = splitIntoMemories(rawText);
+
+    if (memories.length === 0) {
+      return NextResponse.json({ error: "未能从文件中提取有效内容" }, { status: 400 });
     }
 
-    // Call Haiku to split into memory entries
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "API key not configured" }, { status: 500 });
-    }
-
-    const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-      },
-      body: JSON.stringify({
-        model: "anthropic/claude-haiku-4-5-20251001",
-        messages: [
-          {
-            role: "user",
-            content: `将以下文本内容拆分为独立的记忆条目。每条记忆应该是一个完整的、自包含的信息点，1-3句话。
-只返回 JSON 数组格式，不要任何其他文字：["记忆1", "记忆2", ...]
-
-文本内容：
-${rawText}`,
-          },
-        ],
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const err = await aiResponse.text();
-      console.error("File parse AI error:", err);
-      return NextResponse.json({ error: "AI 解析失败" }, { status: 500 });
-    }
-
-    const aiData = await aiResponse.json();
-    const text = aiData.choices?.[0]?.message?.content || "";
-
-    // Parse the JSON array
-    let memories: string[] = [];
-    try {
-      const cleaned = text.replace(/```json|```/g, "").trim();
-      memories = JSON.parse(cleaned);
-      if (!Array.isArray(memories)) {
-        memories = [String(memories)];
-      }
-    } catch {
-      // If JSON parse fails, split by newlines
-      memories = text
-        .split("\n")
-        .map((l: string) => l.replace(/^[-\d.)\]]+\s*/, "").trim())
-        .filter((l: string) => l.length > 0);
-    }
-
-    return NextResponse.json({
-      filename: file.name,
-      memories: memories.filter((m) => m && m.length > 0),
-    });
+    return NextResponse.json({ filename: file.name, memories });
   } catch (error) {
     console.error("File parse error:", error);
     return NextResponse.json({ error: "文件解析失败" }, { status: 500 });
   }
+}
+
+function splitIntoMemories(text: string): string[] {
+  // First try splitting by double newlines (paragraphs)
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  // If we got reasonable paragraphs (2+), use those
+  if (paragraphs.length >= 2) {
+    // Split any remaining very long paragraphs (>500 chars) by single newlines
+    const result: string[] = [];
+    for (const p of paragraphs) {
+      if (p.length > 500) {
+        const lines = p
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0);
+        result.push(...lines);
+      } else {
+        result.push(p);
+      }
+    }
+    return result;
+  }
+
+  // Otherwise split by single newlines
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  // Filter out very short lines (likely headers or artifacts)
+  // and merge consecutive short lines
+  if (lines.length > 0) {
+    return lines.filter((l) => l.length >= 2);
+  }
+
+  // Last resort: return the whole text as one entry
+  return [text.trim()];
 }
