@@ -26,6 +26,7 @@ export default function ChatPage() {
   const [assistantManagerOpen, setAssistantManagerOpen] = useState(false);
   const [showAssistantPicker, setShowAssistantPicker] = useState(false);
   const [showExportPicker, setShowExportPicker] = useState(false);
+  const [pendingAssistantId, setPendingAssistantId] = useState<string | null>(null);
   const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -189,7 +190,13 @@ export default function ChatPage() {
 
   // Raw helper (no dependency on state setters)
   const getCurrentAssistantRaw = (): Assistant | null => {
-    if (!currentConvId) return assistants[0] || null;
+    if (!currentConvId) {
+      // No conversation - use pending assistant or first
+      if (pendingAssistantId) {
+        return assistants.find((a) => a.id === pendingAssistantId) || assistants[0] || null;
+      }
+      return assistants[0] || null;
+    }
     const conv = conversations.find((c) => c.id === currentConvId);
     if (!conv?.assistant_id) return null;
     return assistants.find((a) => a.id === conv.assistant_id) || null;
@@ -302,26 +309,15 @@ export default function ChatPage() {
     return getCurrentAssistantRaw();
   };
 
-  // Create new conversation
+  // Create new conversation - just reset state, DB record created on first message
   const handleNewConversation = async () => {
-    try {
-      const defaultAssistant = assistants[0];
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assistant_id: defaultAssistant?.id || null,
-          current_model: model,
-        }),
-      });
-      const conv = await res.json();
-      if (conv.id) {
-        await fetchConversations();
-        setCurrentConvId(conv.id);
-        setMessages([]);
-      }
-    } catch (e) {
-      console.error("Failed to create conversation:", e);
+    setCurrentConvId(null);
+    setMessages([]);
+    // Use current assistant's model or first assistant's
+    const assistant = getCurrentAssistantRaw() || assistants[0];
+    if (assistant) {
+      setPendingAssistantId(assistant.id);
+      setModel(assistant.default_model);
     }
   };
 
@@ -387,6 +383,8 @@ export default function ChatPage() {
   const handleAssistantSwitch = async (assistant: Assistant) => {
     setShowAssistantPicker(false);
     setModel(assistant.default_model);
+    setPendingAssistantId(assistant.id);
+
     if (currentConvId) {
       // Update existing conversation's assistant
       await fetch("/api/conversations", {
@@ -435,12 +433,12 @@ export default function ChatPage() {
     let convId = currentConvId;
     if (!convId) {
       try {
-        const defaultAssistant = assistants[0];
+        const assistantId = pendingAssistantId || assistants[0]?.id || null;
         const res = await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            assistant_id: defaultAssistant?.id || null,
+            assistant_id: assistantId,
             current_model: model,
           }),
         });
