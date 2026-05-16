@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg-primary: #2b2520;
   --bg-secondary: #342e28;
   --bg-tertiary: #3d362f;
@@ -21,6 +22,54 @@
   --scrollbar-thumb: #4a413a;
   --scrollbar-track: transparent;
   --code-bg: #1e1a16;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f5f0eb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #ebe5de;
+  --bg-hover: #e0d8d0;
+  --bg-input: #ffffff;
+  --bg-message-user: #e8ddd2;
+  --text-primary: #2b2520;
+  --text-secondary: #6b6058;
+  --text-tertiary: #9a8e84;
+  --text-placeholder: #b0a498;
+  --border-color: #d8cfc6;
+  --border-subtle: #e8e0d8;
+  --accent: #a87840;
+  --accent-hover: #c08848;
+  --accent-muted: rgba(168, 120, 64, 0.1);
+  --scrollbar-thumb: #c8bfb6;
+  --scrollbar-track: transparent;
+  --code-bg: #f0e8e0;
+  color-scheme: light;
+}
+
+/* System preference - only applies when data-theme="system" or not set */
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    --bg-primary: #f5f0eb;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #ebe5de;
+    --bg-hover: #e0d8d0;
+    --bg-input: #ffffff;
+    --bg-message-user: #e8ddd2;
+    --text-primary: #2b2520;
+    --text-secondary: #6b6058;
+    --text-tertiary: #9a8e84;
+    --text-placeholder: #b0a498;
+    --border-color: #d8cfc6;
+    --border-subtle: #e8e0d8;
+    --accent: #a87840;
+    --accent-hover: #c08848;
+    --accent-muted: rgba(168, 120, 64, 0.1);
+    --scrollbar-thumb: #c8bfb6;
+    --scrollbar-track: transparent;
+    --code-bg: #f0e8e0;
+    color-scheme: light;
+  }
 }
 
 * {

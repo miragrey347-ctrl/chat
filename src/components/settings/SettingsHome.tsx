@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
 
 interface SettingsHomeProps {
@@ -106,6 +106,22 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("深色");
   const [currentLang, setCurrentLang] = useState("简体中文");
+
+  const themeMap: Record<string, string> = { "深色": "dark", "浅色": "light", "跟随系统": "system" };
+  const themeMapReverse: Record<string, string> = { dark: "深色", light: "浅色", system: "跟随系统" };
+
+  useEffect(() => {
+    const saved = localStorage.getItem("color-mode") || "dark";
+    setCurrentTheme(themeMapReverse[saved] || "深色");
+  }, []);
+
+  const applyTheme = (label: string) => {
+    const value = themeMap[label] || "dark";
+    setCurrentTheme(label);
+    localStorage.setItem("color-mode", value);
+    document.documentElement.setAttribute("data-theme", value);
+    setShowThemePicker(false);
+  };
 
   return (
     <div
@@ -245,10 +261,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
           {["跟随系统", "深色", "浅色"].map((t) => (
             <button
               key={t}
-              onClick={() => {
-                setCurrentTheme(t);
-                setShowThemePicker(false);
-              }}
+              onClick={() => applyTheme(t)}
               style={{
                 width: "100%",
                 display: "flex",
