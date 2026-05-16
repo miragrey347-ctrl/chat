@@ -24,6 +24,7 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [assistantManagerOpen, setAssistantManagerOpen] = useState(false);
+  const [showAssistantPicker, setShowAssistantPicker] = useState(false);
   const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -378,6 +379,25 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: currentConvId, current_model: newModel }),
       });
+    }
+  };
+
+  // Switch assistant for current or next conversation
+  const handleAssistantSwitch = async (assistant: Assistant) => {
+    setShowAssistantPicker(false);
+    setModel(assistant.default_model);
+    if (currentConvId) {
+      // Update existing conversation's assistant
+      await fetch("/api/conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: currentConvId,
+          assistant_id: assistant.id,
+          current_model: assistant.default_model,
+        }),
+      });
+      await fetchConversations();
     }
   };
 
@@ -920,7 +940,25 @@ export default function ChatPage() {
           <div style={{ width: "30px" }} />
         )}
 
-        <ModelSelector currentModel={model} onChange={handleModelChange} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+          {/* Assistant name */}
+          <button
+            onClick={() => setShowAssistantPicker(true)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-secondary)",
+              fontSize: "12px",
+              cursor: "pointer",
+              padding: "2px 8px",
+              touchAction: "manipulation",
+            }}
+          >
+            {getCurrentAssistant()?.name || "未选择助手"} ▾
+          </button>
+          {/* Model selector */}
+          <ModelSelector currentModel={model} onChange={handleModelChange} />
+        </div>
 
         <button
           onClick={() => router.push("/settings")}
@@ -936,6 +974,114 @@ export default function ChatPage() {
           ⚙
         </button>
       </header>
+
+      {/* Assistant Picker */}
+      {showAssistantPicker && (
+        <>
+          <div
+            onClick={() => setShowAssistantPicker(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.5)",
+              zIndex: 200,
+            }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: "var(--bg-secondary)",
+              borderRadius: "16px 16px 0 0",
+              padding: "24px 20px",
+              paddingBottom: "max(24px, env(safe-area-inset-bottom))",
+              zIndex: 210,
+              animation: "sheet-up 250ms ease",
+            }}
+          >
+            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "16px" }}>
+              选择助手
+            </h3>
+            {assistants.map((a) => {
+              const isCurrent = getCurrentAssistant()?.id === a.id;
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => handleAssistantSwitch(a)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px",
+                    borderRadius: "10px",
+                    marginBottom: "6px",
+                    background: isCurrent ? "var(--bg-tertiary)" : "transparent",
+                    border: isCurrent ? "1px solid var(--accent)" : "1px solid transparent",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    touchAction: "manipulation",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "8px",
+                      background: "var(--bg-tertiary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "16px",
+                      color: "var(--accent)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {a.name.charAt(0)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "15px", fontWeight: 500, color: "var(--text-primary)" }}>
+                      {a.name}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--text-tertiary)" }}>
+                      {a.default_model.split("/").pop()}
+                      {a.tags ? ` · ${a.tags}` : ""}
+                    </div>
+                  </div>
+                  {isCurrent && (
+                    <span style={{ color: "var(--accent)", fontSize: "14px" }}>✓</span>
+                  )}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setShowAssistantPicker(false)}
+              style={{
+                width: "100%",
+                padding: "14px",
+                marginTop: "10px",
+                borderRadius: "12px",
+                border: "none",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "15px",
+                cursor: "pointer",
+                touchAction: "manipulation",
+              }}
+            >
+              取消
+            </button>
+          </div>
+          <style>{`
+            @keyframes sheet-up {
+              from { transform: translateY(100%); }
+              to { transform: translateY(0); }
+            }
+          `}</style>
+        </>
+      )}
 
       {/* Assistant Manager */}
       <AssistantManager
