@@ -760,21 +760,25 @@ export default function ChatPage() {
   };
 
   // Regenerate: remove last assistant message, re-request with same context
-  const handleRegenerate = async () => {
+  const handleRegenerate = async (atIndex?: number) => {
     if (!currentConvId || messages.length < 2) return;
 
-    const lastAssistant = messages[messages.length - 1];
-    if (lastAssistant.role !== "assistant") return;
+    // If no index specified, regenerate last assistant message
+    const targetIdx = atIndex ?? messages.length - 1;
+    const targetMsg = messages[targetIdx];
+    if (targetMsg.role !== "assistant") return;
 
-    // Delete assistant message from DB
-    await fetch("/api/messages", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: lastAssistant.id }),
-    });
+    // Delete all messages from targetIdx onwards from DB
+    for (let i = targetIdx; i < messages.length; i++) {
+      await fetch("/api/messages", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: messages[i].id }),
+      });
+    }
 
-    // Keep all messages except last assistant
-    const kept = messages.slice(0, -1);
+    // Keep messages before the target
+    const kept = messages.slice(0, targetIdx);
 
     // Create new placeholder
     const newAssistant: Message = {
@@ -1120,7 +1124,7 @@ export default function ChatPage() {
               isStreaming={isStreaming && i === messages.length - 1 && msg.role === "assistant"}
               displaySettings={displaySettings}
               onEdit={msg.role === "user" ? (newContent) => handleEditResend(i, newContent) : undefined}
-              onRegenerate={msg.role === "assistant" && i === messages.length - 1 ? () => handleRegenerate() : undefined}
+              onRegenerate={msg.role === "assistant" ? () => handleRegenerate(i) : undefined}
               onDelete={() => handleDeleteMessage(msg.id, i)}
             />
           ))}
