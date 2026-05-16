@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
+import FileUploadMemory from "./FileUploadMemory";
 import SettingsPageLayout, {
   SettingsCard,
   SettingsDivider,
@@ -53,6 +54,22 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
       }),
     });
     setNewMemory("");
+    fetchMemories();
+  };
+
+  const addMemoriesFromFile = async (memories: string[]) => {
+    if (!assistantId) return;
+    for (const content of memories) {
+      await fetch("/api/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assistant_id: assistantId,
+          content,
+          source: "file",
+        }),
+      });
+    }
     fetchMemories();
   };
 
@@ -133,22 +150,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
         </div>
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>
-          <div
-            style={{
-              padding: "12px 16px",
-              borderRadius: "10px",
-              border: "1px dashed var(--border-color)",
-              textAlign: "center",
-              color: "var(--text-tertiary)",
-              fontSize: "14px",
-              cursor: "pointer",
-            }}
-          >
-            📄 点击上传文件
-            <div style={{ fontSize: "12px", marginTop: "4px" }}>
-              支持 txt/md/json/pdf/docx
-            </div>
-          </div>
+          <FileUploadMemory onConfirm={addMemoriesFromFile} />
         </div>
       </SettingsCard>
 
