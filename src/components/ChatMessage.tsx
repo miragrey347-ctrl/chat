@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -67,6 +67,31 @@ export default function ChatMessage({
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [copied, setCopied] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+
+  const handleSpeak = () => {
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const text = message.content.replace(/```[\s\S]*?```/g, "（代码块已省略）").replace(/[#*`_~\[\]()>|]/g, "");
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "zh-CN";
+    utterance.rate = 1.0;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
+  };
+
+  // Stop speech on unmount
+  useEffect(() => {
+    return () => {
+      if (speaking) window.speechSynthesis.cancel();
+    };
+  }, [speaking]);
 
   // Display settings with safe defaults
   const ds = displaySettings || {
@@ -294,7 +319,7 @@ export default function ChatMessage({
       )}
 
       {/* Action bar */}
-      {!isStreaming && !editing && (showActions || copied) && (
+      {!isStreaming && !editing && (showActions || copied || speaking) && (
         <div style={{
           display: "flex",
           gap: "4px",
@@ -302,6 +327,9 @@ export default function ChatMessage({
           justifyContent: isUser ? "flex-end" : "flex-start",
         }}>
           <ActionBtn label={copied ? "已复制" : "复制"} onClick={handleCopy} />
+          {!isUser && (
+            <ActionBtn label={speaking ? "⏹ 停止" : "🔊 朗读"} onClick={handleSpeak} />
+          )}
           {isUser && onEdit && (
             <ActionBtn label="编辑" onClick={() => { setEditing(true); setEditContent(message.content); }} />
           )}
