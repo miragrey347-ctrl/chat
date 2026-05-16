@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 
 export interface DisplaySettings {
   showAvatars: boolean;
@@ -46,53 +46,51 @@ function loadSettings(): DisplaySettings {
   }
 }
 
-export function useDisplaySettings() {
+// Simple event-driven approach - no polling
+let cachedSettings: DisplaySettings | null = null;
+const listeners = new Set<() => void>();
+
+function getSnapshot(): DisplaySettings {
+  if (!cachedSettings) cachedSettings = loadSettings();
+  return cachedSettings;
+}
+
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}
+
+export function useDisplaySettings(): DisplaySettings {
   const [settings, setSettings] = useState<DisplaySettings>(DISPLAY_DEFAULTS);
 
-  const refresh = useCallback(() => {
-    setSettings(loadSettings());
-  }, []);
-
   useEffect(() => {
-    // Read on mount
-    refresh();
+    // Load on mount
+    setSettings(loadSettings());
 
-    // Re-read when page becomes visible (handles Next.js router cache)
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") refresh();
+    const refresh = () => {
+      cachedSettings = loadSettings();
+      setSettings(cachedSettings);
     };
 
-    // Re-read on window focus (handles tab switching & navigation back)
+    const handleCustom = () => refresh();
+    const handleStorage = (e: StorageEvent) => { if (e.key === STORAGE_KEY) refresh(); };
     const handleFocus = () => refresh();
 
-    // Custom event for same-page updates
-    const handleCustom = () => refresh();
-
-    // Storage event for cross-tab updates
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) refresh();
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", handleFocus);
     window.addEventListener("display-settings-changed", handleCustom);
     window.addEventListener("storage", handleStorage);
-
-    // Also poll on a short interval as ultimate fallback for route changes
-    const poll = setInterval(refresh, 2000);
+    window.addEventListener("focus", handleFocus);
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", handleFocus);
       window.removeEventListener("display-settings-changed", handleCustom);
       window.removeEventListener("storage", handleStorage);
-      clearInterval(poll);
+      window.removeEventListener("focus", handleFocus);
     };
-  }, [refresh]);
+  }, []);
 
   return settings;
 }
 
 export function notifyDisplaySettingsChanged() {
+  cachedSettings = null;
   window.dispatchEvent(new Event("display-settings-changed"));
 }

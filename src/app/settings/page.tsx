@@ -138,6 +138,7 @@ export default function SettingsPage() {
 
       {/* Current page */}
       <div
+        key={`${currentPage.id}-${navStack.length}`}
         style={{
           position: "absolute",
           inset: 0,

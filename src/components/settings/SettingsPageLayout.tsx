@@ -103,6 +103,7 @@ export function SettingsToggleRow({
         cursor: "pointer",
         textAlign: "left",
         WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
       }}
     >
       <div style={{ flex: 1, marginRight: "12px" }}>

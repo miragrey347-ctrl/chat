@@ -36,6 +36,7 @@ function SettingRow({
         fontSize: "15px",
         textAlign: "left",
         WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
       }}
     >
       <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>

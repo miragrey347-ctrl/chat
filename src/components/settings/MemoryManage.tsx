@@ -101,8 +101,6 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
     (sum, m) => sum + (m.token_count || estimateTokens(m.content)),
     0
   );
-  const budget = 2000;
-  const pct = Math.min(100, (totalTokens / budget) * 100);
 
   const title = assistantName ? `管理记忆（${assistantName}）` : "管理记忆";
 
@@ -157,22 +155,8 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           {/* Token usage */}
-          <div style={{ marginBottom: "12px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "6px" }}>
-              <span>{memories.length} 条记忆，约 {totalTokens} tokens</span>
-              <span>Token 预算：{totalTokens} / {budget}</span>
-            </div>
-            <div style={{ height: "6px", borderRadius: "3px", background: "var(--bg-hover)", overflow: "hidden" }}>
-              <div
-                style={{
-                  height: "100%",
-                  width: `${pct}%`,
-                  borderRadius: "3px",
-                  background: pct > 80 ? "#e5737f" : "var(--accent)",
-                  transition: "width 0.3s",
-                }}
-              />
-            </div>
+          <div style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "12px" }}>
+            {memories.length} 条记忆，约 {totalTokens} tokens
           </div>
 
           {/* Memory list */}
