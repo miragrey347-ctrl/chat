@@ -216,9 +216,24 @@ export default function ChatPage() {
   // 3. Assistant memories (if enabled + has content)
   // 4. Memory extraction instruction (if assistant memory enabled)
   // 5. History summaries (if enabled + has content)
-  const getCurrentSystemPrompt = () => {
-    const conv = conversations.find((c) => c.id === currentConvId);
-    const assistant = conv?.assistant_id ? assistants.find((a) => a.id === conv.assistant_id) : null;
+  const getCurrentSystemPrompt = (overrideAssistantId?: string | null) => {
+    let assistant: Assistant | null = null;
+
+    if (overrideAssistantId) {
+      assistant = assistants.find((a) => a.id === overrideAssistantId) || null;
+    } else {
+      const conv = conversations.find((c) => c.id === currentConvId);
+      assistant = conv?.assistant_id ? assistants.find((a) => a.id === conv.assistant_id) : null;
+    }
+
+    // Fallback: use pending assistant or first assistant
+    if (!assistant) {
+      if (pendingAssistantId) {
+        assistant = assistants.find((a) => a.id === pendingAssistantId) || null;
+      }
+      if (!assistant) assistant = assistants[0] || null;
+    }
+
     const parts: string[] = [];
 
     // Layer 1: Assistant system prompt
@@ -493,8 +508,9 @@ export default function ChatPage() {
     };
     setMessages([...updatedMessages, assistantMsg]);
 
-    // Build API messages
-    const systemPrompt = getCurrentSystemPrompt();
+    // Build API messages - pass assistantId explicitly since state may not be updated yet
+    const usedAssistantId = pendingAssistantId || assistants[0]?.id || null;
+    const systemPrompt = getCurrentSystemPrompt(usedAssistantId);
     const apiMessages: { role: string; content: string }[] = [];
 
     if (systemPrompt) {
