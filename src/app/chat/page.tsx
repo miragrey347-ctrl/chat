@@ -27,6 +27,8 @@ export default function ChatPage() {
   const [showAssistantPicker, setShowAssistantPicker] = useState(false);
   const [showExportPicker, setShowExportPicker] = useState(false);
   const [pendingAssistantId, setPendingAssistantId] = useState<string | null>(null);
+  const [searchMode, setSearchMode] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -493,8 +495,38 @@ export default function ChatPage() {
       apiMessages.push({ role: "system", content: systemPrompt });
     }
 
+    // Search mode: fetch search results and inject as context
+    let searchContext = "";
+    if (searchMode) {
+      setSearching(true);
+      try {
+        const searchRes = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: content, maxResults: 5 }),
+        });
+        const searchData = await searchRes.json();
+        if (searchData.results && searchData.results.length > 0) {
+          searchContext = "\n\n[搜索结果]\n" +
+            searchData.results.map((r: { title: string; snippet: string; url: string }, i: number) =>
+              `${i + 1}. ${r.title}\n${r.snippet}\n来源: ${r.url}`
+            ).join("\n\n") +
+            "\n[搜索结果结束]\n\n请根据以上搜索结果回答用户的问题，在回答中标注信息来源。";
+        }
+      } catch (e) {
+        console.error("Search failed:", e);
+      } finally {
+        setSearching(false);
+      }
+    }
+
     updatedMessages.forEach((m) => {
-      apiMessages.push({ role: m.role, content: m.content });
+      if (m === userMsg && searchContext) {
+        // Inject search results with the user's message
+        apiMessages.push({ role: m.role, content: m.content + searchContext });
+      } else {
+        apiMessages.push({ role: m.role, content: m.content });
+      }
     });
 
     try {
@@ -1356,10 +1388,31 @@ export default function ChatPage() {
               </div>
             );
           })()}
-          <ChatInput onSend={handleSend} disabled={isStreaming} enterToNewline={displaySettings.enterToNewline} />
-          <p style={{ textAlign: "center", fontSize: "12px", marginTop: "10px", color: "var(--text-tertiary)" }}>
-            AI 可能会犯错，请核实重要信息
-          </p>
+          <ChatInput onSend={handleSend} disabled={isStreaming || searching} enterToNewline={displaySettings.enterToNewline} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "8px" }}>
+            <button
+              onClick={() => setSearchMode(!searchMode)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                background: searchMode ? "var(--accent-muted)" : "transparent",
+                border: `1px solid ${searchMode ? "var(--accent)" : "var(--border-color)"}`,
+                borderRadius: "16px",
+                padding: "4px 12px",
+                fontSize: "12px",
+                color: searchMode ? "var(--accent)" : "var(--text-tertiary)",
+                cursor: "pointer",
+                touchAction: "manipulation",
+                transition: "all 0.15s",
+              }}
+            >
+              🔍 {searching ? "搜索中..." : searchMode ? "搜索已开启" : "搜索"}
+            </button>
+            <p style={{ fontSize: "12px", color: "var(--text-tertiary)", margin: 0 }}>
+              AI 可能会犯错，请核实重要信息
+            </p>
+          </div>
         </div>
       </footer>
     </div>
