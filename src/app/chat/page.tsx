@@ -611,8 +611,9 @@ export default function ChatPage() {
             const delta = parsed.choices?.[0]?.delta;
 
             // Extended thinking: reasoning field from OpenRouter/Anthropic
-            if (delta?.reasoning) {
-              thinkingContent += delta.reasoning;
+            if (delta?.reasoning || delta?.reasoning_content) {
+              const reasonChunk = delta.reasoning || delta.reasoning_content;
+              thinkingContent += reasonChunk;
               setMessages((prev) => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
@@ -801,8 +802,9 @@ export default function ChatPage() {
               usageData = { ...usageData, ...parsed.usage };
             }
             const delta = parsed.choices?.[0]?.delta;
-            if (delta?.reasoning) {
-              thinkingContent += delta.reasoning;
+            if (delta?.reasoning || delta?.reasoning_content) {
+              const reasonChunk = delta.reasoning || delta.reasoning_content;
+              thinkingContent += reasonChunk;
               setMessages((prev) => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
@@ -953,8 +955,9 @@ export default function ChatPage() {
               usageData = { ...usageData, ...parsed.usage };
             }
             const delta = parsed.choices?.[0]?.delta;
-            if (delta?.reasoning) {
-              thinkingContent += delta.reasoning;
+            if (delta?.reasoning || delta?.reasoning_content) {
+              const reasonChunk = delta.reasoning || delta.reasoning_content;
+              thinkingContent += reasonChunk;
               setMessages((prev) => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];

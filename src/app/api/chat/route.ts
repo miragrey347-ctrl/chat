@@ -54,11 +54,23 @@ export async function POST(request: Request) {
     };
 
     // Extended thinking support
-    if (thinking && thinking.enabled && isAnthropic) {
-      openRouterBody.thinking = {
-        type: "enabled",
-        budget_tokens: thinking.budget || 10000,
+    if (thinking && thinking.enabled) {
+      if (isAnthropic) {
+        // Anthropic native thinking parameter
+        openRouterBody.thinking = {
+          type: "enabled",
+          budget_tokens: thinking.budget || 10000,
+        };
+        // Ensure provider passes through the parameter
+        openRouterBody.provider = {
+          require_parameters: true,
+        };
+      }
+      // OpenRouter universal reasoning
+      openRouterBody.reasoning = {
+        effort: "high",
       };
+      openRouterBody.include_reasoning = true;
     }
 
     // Include usage stats in streaming
