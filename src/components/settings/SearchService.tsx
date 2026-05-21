@@ -73,8 +73,9 @@ export default function SearchService({ nav }: { nav: NavContext }) {
       <SectionLabel>说明</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px", fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
-          <p style={{ marginBottom: "8px" }}>搜索使用 DuckDuckGo，无需 API Key。</p>
-          <p>如需更稳定的搜索，可在 Vercel 环境变量中添加 <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>BRAVE_SEARCH_API_KEY</span>（Brave Search 免费注册即可获取）。</p>
+          <p style={{ marginBottom: "8px" }}>需要在 Vercel 环境变量中配置搜索 API Key（二选一）：</p>
+          <p style={{ marginBottom: "6px" }}>• <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>SERPER_API_KEY</span>（推荐，serper.dev 免费 2500 次/月）</p>
+          <p>• <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>BRAVE_SEARCH_API_KEY</span>（api.search.brave.com 免费 2000 次/月）</p>
         </div>
       </SettingsCard>
     </SettingsPageLayout>
