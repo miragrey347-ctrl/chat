@@ -30,6 +30,8 @@ export default function ChatPage() {
   const [searchMode, setSearchMode] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [thinkingMode, setThinkingMode] = useState(false);
+  const [thinkingBudget, setThinkingBudget] = useState(10000);
 
   // Load search enabled from settings
   useEffect(() => {
@@ -564,7 +566,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined }),
         signal: abortRef.current.signal,
       });
 
@@ -608,9 +610,23 @@ export default function ChatPage() {
 
             const delta = parsed.choices?.[0]?.delta;
 
+            // Extended thinking: reasoning field from OpenRouter/Anthropic
+            if (delta?.reasoning) {
+              thinkingContent += delta.reasoning;
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last.role === "assistant") {
+                  updated[updated.length - 1] = { ...last, thinking_content: thinkingContent };
+                }
+                return updated;
+              });
+            }
+
             if (delta?.content) {
               let chunk = delta.content;
 
+              // Fallback: parse <thinking> tags from content
               if (chunk.includes("<thinking>")) {
                 inThinking = true;
                 chunk = chunk.replace("<thinking>", "");
@@ -753,7 +769,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined }),
         signal: abortRef.current.signal,
       });
 
@@ -785,6 +801,17 @@ export default function ChatPage() {
               usageData = { ...usageData, ...parsed.usage };
             }
             const delta = parsed.choices?.[0]?.delta;
+            if (delta?.reasoning) {
+              thinkingContent += delta.reasoning;
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last.role === "assistant") {
+                  updated[updated.length - 1] = { ...last, thinking_content: thinkingContent };
+                }
+                return updated;
+              });
+            }
             if (delta?.content) {
               let chunk = delta.content;
               if (chunk.includes("<thinking>")) { inThinking = true; chunk = chunk.replace("<thinking>", ""); }
@@ -892,7 +919,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined }),
         signal: abortRef.current.signal,
       });
 
@@ -926,6 +953,17 @@ export default function ChatPage() {
               usageData = { ...usageData, ...parsed.usage };
             }
             const delta = parsed.choices?.[0]?.delta;
+            if (delta?.reasoning) {
+              thinkingContent += delta.reasoning;
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last.role === "assistant") {
+                  updated[updated.length - 1] = { ...last, thinking_content: thinkingContent };
+                }
+                return updated;
+              });
+            }
             if (delta?.content) {
               let chunk = delta.content;
               if (chunk.includes("<thinking>")) { inThinking = true; chunk = chunk.replace("<thinking>", ""); }
@@ -1473,29 +1511,48 @@ export default function ChatPage() {
           })()}
           <ChatInput onSend={handleSend} disabled={isStreaming || searching} enterToNewline={displaySettings.enterToNewline} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "8px" }}>
-            {searchEnabled ? (
+            <div style={{ display: "flex", gap: "6px" }}>
+              {searchEnabled && (
+                <button
+                  onClick={() => setSearchMode(!searchMode)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    background: searchMode ? "var(--accent-muted)" : "transparent",
+                    border: `1px solid ${searchMode ? "var(--accent)" : "var(--border-color)"}`,
+                    borderRadius: "16px",
+                    padding: "4px 12px",
+                    fontSize: "12px",
+                    color: searchMode ? "var(--accent)" : "var(--text-tertiary)",
+                    cursor: "pointer",
+                    touchAction: "manipulation",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  🔍 {searching ? "搜索中..." : searchMode ? "搜索已开启" : "搜索"}
+                </button>
+              )}
               <button
-                onClick={() => setSearchMode(!searchMode)}
+                onClick={() => setThinkingMode(!thinkingMode)}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
-                  background: searchMode ? "var(--accent-muted)" : "transparent",
-                  border: `1px solid ${searchMode ? "var(--accent)" : "var(--border-color)"}`,
+                  background: thinkingMode ? "var(--accent-muted)" : "transparent",
+                  border: `1px solid ${thinkingMode ? "var(--accent)" : "var(--border-color)"}`,
                   borderRadius: "16px",
                   padding: "4px 12px",
                   fontSize: "12px",
-                  color: searchMode ? "var(--accent)" : "var(--text-tertiary)",
+                  color: thinkingMode ? "var(--accent)" : "var(--text-tertiary)",
                   cursor: "pointer",
                   touchAction: "manipulation",
                   transition: "all 0.15s",
                 }}
               >
-                🔍 {searching ? "搜索中..." : searchMode ? "搜索已开启" : "搜索"}
+                💭 {thinkingMode ? "深度思考" : "思考"}
               </button>
-            ) : (
-              <div />
-            )}
+            </div>
             <p style={{ fontSize: "12px", color: "var(--text-tertiary)", margin: 0 }}>
               AI 可能会犯错，请核实重要信息
             </p>

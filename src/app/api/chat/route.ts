@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { messages, model, stream, caching } = body;
+    const { messages, model, stream, caching, thinking } = body;
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
@@ -31,7 +31,6 @@ export async function POST(request: Request) {
             ],
           };
         }
-        // Also cache the last user message before the new one for better hit rates
         if (msg.role === "user" && i === messages.length - 2 && messages.length > 3) {
           return {
             role: "user",
@@ -53,6 +52,14 @@ export async function POST(request: Request) {
       messages: processedMessages,
       stream: stream ?? true,
     };
+
+    // Extended thinking support
+    if (thinking && thinking.enabled && isAnthropic) {
+      openRouterBody.thinking = {
+        type: "enabled",
+        budget_tokens: thinking.budget || 10000,
+      };
+    }
 
     // Include usage stats in streaming
     if (stream) {
