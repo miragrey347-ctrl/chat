@@ -225,7 +225,7 @@ export default function ChatPage() {
       assistant = assistants.find((a) => a.id === overrideAssistantId) || null;
     } else {
       const conv = conversations.find((c) => c.id === currentConvId);
-      assistant = conv?.assistant_id ? assistants.find((a) => a.id === conv.assistant_id) : null;
+      assistant = conv?.assistant_id ? (assistants.find((a) => a.id === conv.assistant_id) || null) : null;
     }
 
     // Fallback: use pending assistant or first assistant
