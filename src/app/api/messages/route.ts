@@ -36,6 +36,8 @@ export async function POST(request: Request) {
       model_used: body.model_used || null,
       input_tokens: body.input_tokens || null,
       output_tokens: body.output_tokens || null,
+      cache_status: body.cache_status || null,
+      cached_tokens: body.cached_tokens || null,
     })
     .select()
     .single();

@@ -434,6 +434,8 @@ export default function ChatPage() {
     model_used?: string;
     input_tokens?: number | null;
     output_tokens?: number | null;
+    cache_status?: string | null;
+    cached_tokens?: number | null;
   }) => {
     try {
       await fetch("/api/messages", {
@@ -662,6 +664,8 @@ export default function ChatPage() {
         model_used: model,
         input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
         output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
+        cache_status: cacheStatus || null,
+        cached_tokens: cachedTokens || null,
       });
 
       // Update local message with cleaned content, token stats, and cache info
@@ -799,6 +803,8 @@ export default function ChatPage() {
         }
       }
 
+      const { cacheStatus: editCS, cachedTokens: editCT } = extractCacheInfo(usageData as Record<string, unknown>);
+
       saveMessage({
         conversation_id: currentConvId,
         role: "assistant",
@@ -807,9 +813,10 @@ export default function ChatPage() {
         model_used: model,
         input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
         output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
+        cache_status: editCS || null,
+        cached_tokens: editCT || null,
       });
 
-      // Update local message with token stats
       setMessages((prev) => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
@@ -819,6 +826,8 @@ export default function ChatPage() {
             content: fullContent,
             input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || undefined,
             output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || undefined,
+            cache_status: editCS || undefined,
+            cached_tokens: editCT || undefined,
           };
         }
         return updated;
@@ -936,6 +945,8 @@ export default function ChatPage() {
         }
       }
 
+      const { cacheStatus: regenCS, cachedTokens: regenCT } = extractCacheInfo(usageData as Record<string, unknown>);
+
       saveMessage({
         conversation_id: currentConvId,
         role: "assistant",
@@ -944,6 +955,8 @@ export default function ChatPage() {
         model_used: model,
         input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
         output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
+        cache_status: regenCS || null,
+        cached_tokens: regenCT || null,
       });
 
       setMessages((prev) => {
@@ -955,6 +968,8 @@ export default function ChatPage() {
             content: fullContent,
             input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || undefined,
             output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || undefined,
+            cache_status: regenCS || undefined,
+            cached_tokens: regenCT || undefined,
           };
         }
         return updated;
