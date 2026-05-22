@@ -75,17 +75,18 @@ export default function ChatPage() {
     }
   };
 
-  // Load messages when conversation changes
+  // Load messages when conversation changes (skip during streaming to prevent overwrite)
   useEffect(() => {
     if (!currentConvId) {
       setMessages([]);
-      // When no conversation, use first assistant's default model
       if (assistants.length > 0) {
         setModel(assistants[0].default_model);
       }
       return;
     }
-    fetchMessages(currentConvId);
+    if (!isStreaming) {
+      fetchMessages(currentConvId);
+    }
 
     // Set model: prefer conversation's saved model, fall back to assistant's default
     const conv = conversations.find((c) => c.id === currentConvId);
@@ -434,7 +435,8 @@ export default function ChatPage() {
         const conv = await res.json();
         convId = conv.id;
         setCurrentConvId(conv.id);
-        await fetchConversations();
+        // Don't fetchConversations here - it causes re-render during streaming
+        // Will fetch after streaming completes
       } catch (e) {
         console.error("Failed to create conversation:", e);
         return;
@@ -669,6 +671,7 @@ export default function ChatPage() {
     } finally {
       setIsStreaming(false);
       abortRef.current = null;
+      fetchConversations();
     }
   };
 
