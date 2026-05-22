@@ -1150,6 +1150,73 @@ export default function ChatPage() {
     triggerDownload(txt, `${safeTitle}.txt`, "text/plain");
   };
 
+  // ── Keyboard Shortcuts ──
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+
+      // Cmd/Ctrl + N: New conversation
+      if (meta && e.key === "n") {
+        e.preventDefault();
+        handleNewConversation();
+        return;
+      }
+
+      // Cmd/Ctrl + Shift + S: Open settings
+      if (meta && e.shiftKey && e.key === "s") {
+        e.preventDefault();
+        router.push("/settings");
+        return;
+      }
+
+      // Cmd/Ctrl + B: Toggle sidebar
+      if (meta && e.key === "b") {
+        e.preventDefault();
+        setSidebarOpen((v) => !v);
+        return;
+      }
+
+      // Cmd/Ctrl + E: Export
+      if (meta && e.key === "e" && messages.length > 0) {
+        e.preventDefault();
+        setShowExportPicker(true);
+        return;
+      }
+
+      // Cmd/Ctrl + /: Show shortcuts
+      if (meta && e.key === "/") {
+        e.preventDefault();
+        setShowShortcuts((v) => !v);
+        return;
+      }
+
+      // Escape: close modals / stop streaming
+      if (e.key === "Escape") {
+        if (showShortcuts) { setShowShortcuts(false); return; }
+        if (showExportPicker) { setShowExportPicker(false); return; }
+        if (showAssistantPicker) { setShowAssistantPicker(false); return; }
+        if (sidebarOpen) { setSidebarOpen(false); return; }
+        if (isStreaming && abortRef.current) {
+          abortRef.current.abort();
+          return;
+        }
+      }
+
+      // Cmd/Ctrl + I: Focus input
+      if (meta && e.key === "i") {
+        e.preventDefault();
+        const textarea = document.querySelector("textarea");
+        textarea?.focus();
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [messages.length, isStreaming, showShortcuts, showExportPicker, showAssistantPicker, sidebarOpen]);
+
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
       {/* Sidebar */}
@@ -1442,6 +1509,84 @@ export default function ChatPage() {
               }}
             >
               取消
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Shortcuts Help */}
+      {showShortcuts && (
+        <>
+          <div
+            onClick={() => setShowShortcuts(false)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200 }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "var(--bg-secondary)",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "min(360px, 90vw)",
+              zIndex: 210,
+            }}
+          >
+            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "16px" }}>
+              快捷键
+            </h3>
+            {[
+              ["⌘/Ctrl + N", "新建对话"],
+              ["⌘/Ctrl + B", "切换侧边栏"],
+              ["⌘/Ctrl + I", "聚焦输入框"],
+              ["⌘/Ctrl + E", "导出对话"],
+              ["⌘/Ctrl + ⇧ + S", "打开设置"],
+              ["⌘/Ctrl + /", "显示快捷键"],
+              ["Esc", "关闭弹窗 / 停止生成"],
+            ].map(([key, desc]) => (
+              <div
+                key={key}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 0",
+                  borderBottom: "1px solid var(--border-subtle)",
+                }}
+              >
+                <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>{desc}</span>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--text-tertiary)",
+                    background: "var(--bg-tertiary)",
+                    padding: "3px 8px",
+                    borderRadius: "6px",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {key}
+                </span>
+              </div>
+            ))}
+            <button
+              onClick={() => setShowShortcuts(false)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                marginTop: "16px",
+                borderRadius: "10px",
+                border: "none",
+                background: "var(--bg-tertiary)",
+                color: "var(--text-primary)",
+                fontSize: "14px",
+                cursor: "pointer",
+                touchAction: "manipulation",
+              }}
+            >
+              关闭
             </button>
           </div>
         </>
