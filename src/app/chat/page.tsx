@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
+import type { Attachment } from "@/components/ChatInput";
 import Sidebar from "@/components/Sidebar";
 import ModelSelector from "@/components/ModelSelector";
 import AssistantManager from "@/components/AssistantManager";
@@ -41,6 +42,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const prevConvIdRef = useRef<string | null>(null);
+  const imageDataRef = useRef<Record<string, string[]>>({});
 
   // Load conversations and assistants on mount
   useEffect(() => {
@@ -425,7 +427,7 @@ export default function ChatPage() {
   };
 
   // Send message
-  const handleSend = async (content: string) => {
+  const handleSend = async (content: string, attachments?: Attachment[]) => {
     // Auto-create conversation if none selected
     let convId = currentConvId;
     if (!convId) {
@@ -450,25 +452,44 @@ export default function ChatPage() {
       }
     }
 
+    // Build user display content (includes file text, image placeholders)
+    let displayContent = content;
+    const imageAttachments = attachments?.filter((a) => a.type === "image") || [];
+    const fileAttachments = attachments?.filter((a) => a.type === "file") || [];
+
+    if (fileAttachments.length > 0) {
+      const fileParts = fileAttachments.map((f) => `[文件: ${f.name}]\n${f.data}`).join("\n\n");
+      displayContent = displayContent ? `${displayContent}\n\n${fileParts}` : fileParts;
+    }
+    if (imageAttachments.length > 0) {
+      const imgNames = imageAttachments.map((a) => `[图片: ${a.name}]`).join(" ");
+      displayContent = displayContent ? `${displayContent}\n${imgNames}` : imgNames;
+    }
+
     // User message
     const userMsg: Message = {
       id: generateId(),
       conversation_id: convId!,
       role: "user",
-      content,
+      content: displayContent,
       created_at: new Date().toISOString(),
     };
+
+    // Store image data for display in current session
+    if (imageAttachments.length > 0) {
+      imageDataRef.current[userMsg.id] = imageAttachments.map((a) => a.data);
+    }
 
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setIsStreaming(true);
 
     // Save user message
-    saveMessage({ conversation_id: convId!, role: "user", content });
+    saveMessage({ conversation_id: convId!, role: "user", content: displayContent });
 
     // Auto-title on first message
     if (updatedMessages.filter((m) => m.role === "user").length === 1) {
-      autoTitle(convId!, content);
+      autoTitle(convId!, content || (fileAttachments[0]?.name || imageAttachments[0]?.name || "新对话"));
     }
 
     // Placeholder for assistant
@@ -486,7 +507,7 @@ export default function ChatPage() {
     // Build API messages - pass assistantId explicitly since state may not be updated yet
     const usedAssistantId = pendingAssistantId || assistants[0]?.id || null;
     const systemPrompt = getCurrentSystemPrompt(usedAssistantId);
-    const apiMessages: { role: string; content: string }[] = [];
+    const apiMessages: { role: string; content: string | Array<Record<string, unknown>> }[] = [];
 
     if (systemPrompt) {
       apiMessages.push({ role: "system", content: systemPrompt });
@@ -521,8 +542,35 @@ export default function ChatPage() {
     }
 
     updatedMessages.forEach((m) => {
-      if (m === userMsg && searchContext) {
-        // Inject search results with the user's message
+      const isCurrentUserMsg = m === userMsg;
+
+      // Check if this message has images to send
+      if (isCurrentUserMsg && imageAttachments.length > 0) {
+        // Build multimodal content
+        const parts: Array<Record<string, unknown>> = [];
+
+        // Add images first
+        imageAttachments.forEach((img) => {
+          const base64Data = img.data.split(",")[1] || img.data;
+          parts.push({
+            type: "image_url",
+            image_url: { url: `data:${img.mimeType};base64,${base64Data}` },
+          });
+        });
+
+        // Add text content
+        let textContent = content;
+        if (fileAttachments.length > 0) {
+          const fileParts = fileAttachments.map((f) => `[文件: ${f.name}]\n${f.data}`).join("\n\n");
+          textContent = textContent ? `${textContent}\n\n${fileParts}` : fileParts;
+        }
+        if (searchContext) textContent += searchContext;
+        if (textContent) {
+          parts.push({ type: "text", text: textContent });
+        }
+
+        apiMessages.push({ role: m.role, content: parts });
+      } else if (isCurrentUserMsg && searchContext) {
         apiMessages.push({ role: m.role, content: m.content + searchContext });
       } else {
         apiMessages.push({ role: m.role, content: m.content });
@@ -1435,6 +1483,7 @@ export default function ChatPage() {
               message={msg}
               isStreaming={isStreaming && i === messages.length - 1 && msg.role === "assistant"}
               displaySettings={displaySettings}
+              imageData={imageDataRef.current[msg.id]}
               onEdit={msg.role === "user" ? (newContent) => handleEditResend(i, newContent) : undefined}
               onRegenerate={msg.role === "assistant" ? () => handleRegenerate(i) : undefined}
               onDelete={() => handleDeleteMessage(msg.id, i)}

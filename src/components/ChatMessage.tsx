@@ -48,6 +48,7 @@ interface ChatMessageProps {
   message: Message;
   isStreaming?: boolean;
   displaySettings?: DisplaySettings;
+  imageData?: string[];
   onCopy?: () => void;
   onEdit?: (content: string) => void;
   onRegenerate?: () => void;
@@ -58,6 +59,7 @@ export default function ChatMessage({
   message,
   isStreaming,
   displaySettings,
+  imageData,
   onEdit,
   onRegenerate,
   onDelete,
@@ -233,6 +235,25 @@ export default function ChatMessage({
                 {renderContent(message.thinking_content, true)}
               </div>
             </details>
+          )}
+
+          {/* Images */}
+          {imageData && imageData.length > 0 && (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
+              {imageData.map((src, idx) => (
+                <img
+                  key={idx}
+                  src={src}
+                  alt=""
+                  style={{
+                    maxWidth: "280px",
+                    maxHeight: "280px",
+                    borderRadius: "12px",
+                    objectFit: "cover",
+                  }}
+                />
+              ))}
+            </div>
           )}
 
           {/* Content */}

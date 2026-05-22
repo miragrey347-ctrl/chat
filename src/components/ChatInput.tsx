@@ -2,15 +2,24 @@
 
 import { useState, useRef, useEffect } from "react";
 
+export interface Attachment {
+  type: "image" | "file";
+  name: string;
+  data: string; // base64 for images, text content for files
+  mimeType: string;
+}
+
 interface ChatInputProps {
-  onSend: (content: string) => void;
+  onSend: (content: string, attachments?: Attachment[]) => void;
   disabled?: boolean;
   enterToNewline?: boolean;
 }
 
 export default function ChatInput({ onSend, disabled, enterToNewline = true }: ChatInputProps) {
   const [value, setValue] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -25,25 +34,67 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
-    onSend(trimmed);
+    if ((!trimmed && attachments.length === 0) || disabled) return;
+    onSend(trimmed, attachments.length > 0 ? attachments : undefined);
     setValue("");
+    setAttachments([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Enter") return;
-
-    if (enterToNewline) {
-      // Enter = newline (default), only send via button
-      return;
-    } else {
-      // Enter = send, Shift+Enter = newline
-      if (e.shiftKey) return;
-      e.preventDefault();
-      handleSend();
-    }
+    if (enterToNewline) return;
+    if (e.shiftKey) return;
+    e.preventDefault();
+    handleSend();
   };
+
+  const handleFiles = async (files: FileList) => {
+    const newAttachments: Attachment[] = [];
+
+    for (const file of Array.from(files)) {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      const isImage = file.type.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
+      const isText = ["txt", "md", "json", "csv", "js", "ts", "py", "html", "css", "xml", "yaml", "yml", "log"].includes(ext);
+
+      if (isImage) {
+        const base64 = await fileToBase64(file);
+        newAttachments.push({
+          type: "image",
+          name: file.name,
+          data: base64,
+          mimeType: file.type || "image/jpeg",
+        });
+      } else if (isText) {
+        const text = await file.text();
+        newAttachments.push({
+          type: "file",
+          name: file.name,
+          data: text,
+          mimeType: file.type || "text/plain",
+        });
+      } else {
+        alert(`不支持的文件格式: .${ext}`);
+      }
+    }
+
+    setAttachments((prev) => [...prev, ...newAttachments]);
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const canSend = (value.trim() || attachments.length > 0) && !disabled;
 
   return (
     <div
@@ -54,6 +105,59 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
         overflow: "hidden",
       }}
     >
+      {/* Attachment previews */}
+      {attachments.length > 0 && (
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", padding: "12px 16px 0" }}>
+          {attachments.map((att, i) => (
+            <div
+              key={i}
+              style={{
+                position: "relative",
+                borderRadius: "10px",
+                border: "1px solid var(--border-color)",
+                overflow: "hidden",
+                background: "var(--bg-tertiary)",
+              }}
+            >
+              {att.type === "image" ? (
+                <img
+                  src={att.data}
+                  alt={att.name}
+                  style={{ width: "80px", height: "80px", objectFit: "cover", display: "block" }}
+                />
+              ) : (
+                <div style={{ padding: "8px 12px", fontSize: "12px", color: "var(--text-secondary)", maxWidth: "120px" }}>
+                  <div style={{ fontSize: "16px", marginBottom: "4px" }}>📄</div>
+                  <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.name}</div>
+                </div>
+              )}
+              <button
+                onClick={() => removeAttachment(i)}
+                style={{
+                  position: "absolute",
+                  top: "2px",
+                  right: "2px",
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "50%",
+                  background: "rgba(0,0,0,0.6)",
+                  color: "#fff",
+                  border: "none",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  touchAction: "manipulation",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <textarea
         ref={textareaRef}
         value={value}
@@ -79,17 +183,46 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
           fontFamily: "inherit",
         }}
       />
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,.txt,.md,.json,.csv,.js,.ts,.py,.html,.css,.xml,.yaml,.yml,.log"
+        multiple
+        style={{ display: "none" }}
+        onChange={(e) => {
+          if (e.target.files) handleFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           padding: "4px 16px 16px 16px",
         }}
       >
         <button
+          onClick={() => fileRef.current?.click()}
+          disabled={disabled}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--text-tertiary)",
+            fontSize: "20px",
+            cursor: disabled ? "default" : "pointer",
+            padding: "8px",
+            touchAction: "manipulation",
+            opacity: disabled ? 0.4 : 1,
+          }}
+        >
+          +
+        </button>
+        <button
           onClick={handleSend}
-          disabled={!value.trim() || disabled}
+          disabled={!canSend}
           style={{
             width: "40px",
             height: "40px",
@@ -100,8 +233,8 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
             background: "var(--accent)",
             color: "#1a1410",
             border: "none",
-            opacity: value.trim() && !disabled ? 1 : 0.35,
-            cursor: value.trim() && !disabled ? "pointer" : "default",
+            opacity: canSend ? 1 : 0.35,
+            cursor: canSend ? "pointer" : "default",
             transition: "opacity 0.2s",
           }}
         >
