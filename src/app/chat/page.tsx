@@ -277,10 +277,17 @@ export default function ChatPage() {
 
   // Extract cache info from usage data
   const extractCacheInfo = (usage: Record<string, unknown>): { cacheStatus: string; cachedTokens: number } => {
+    // Check multiple possible paths for cache data
     const details = (usage?.prompt_tokens_details || {}) as Record<string, number>;
-    const cachedTokens = details.cached_tokens || 0;
-    const cacheWriteTokens = details.cache_write_tokens || 0;
-    const totalInputTokens = (usage?.prompt_tokens as number) || 0;
+    const nativeUsage = (usage?.native_tokens_usage || {}) as Record<string, unknown>;
+    const nativeInput = (nativeUsage?.input || {}) as Record<string, number>;
+
+    // Try standard path first, then native Anthropic path
+    const cachedTokens = details.cached_tokens || nativeInput.cached_tokens || 
+      (usage?.cached_tokens as number) || (usage?.prompt_cache_hit_tokens as number) || 0;
+    const cacheWriteTokens = details.cache_write_tokens || nativeInput.cache_creation_tokens ||
+      (usage?.cache_write_tokens as number) || (usage?.prompt_cache_miss_tokens as number) || 0;
+    const totalInputTokens = (usage?.prompt_tokens as number) || (usage?.input_tokens as number) || 0;
 
     let cacheStatus = "";
     if (cachedTokens > 0) {
