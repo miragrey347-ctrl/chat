@@ -53,20 +53,27 @@ export async function POST(request: Request) {
       stream: stream ?? true,
     };
 
+    // Enable Anthropic prompt caching via provider routing
+    if (caching && isAnthropic) {
+      openRouterBody.provider = {
+        ...(openRouterBody.provider as Record<string, unknown> || {}),
+        order: ["Anthropic"],
+        allow_fallbacks: false,
+      };
+    }
+
     // Extended thinking support
     if (thinking && thinking.enabled) {
       if (isAnthropic) {
-        // Anthropic native thinking parameter
         openRouterBody.thinking = {
           type: "enabled",
           budget_tokens: thinking.budget || 10000,
         };
-        // Ensure provider passes through the parameter
         openRouterBody.provider = {
+          ...(openRouterBody.provider as Record<string, unknown> || {}),
           require_parameters: true,
         };
       }
-      // OpenRouter universal reasoning
       openRouterBody.reasoning = {
         effort: "high",
       };
@@ -78,14 +85,21 @@ export async function POST(request: Request) {
       openRouterBody.stream_options = { include_usage: true };
     }
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      "X-Title": "Personal Chat",
+    };
+
+    // Add Anthropic caching beta header
+    if (caching && isAnthropic) {
+      headers["X-Anthropic-Beta"] = "prompt-caching-2024-07-31";
+    }
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-        "X-Title": "Personal Chat",
-      },
+      headers,
       body: JSON.stringify(openRouterBody),
     });
 
