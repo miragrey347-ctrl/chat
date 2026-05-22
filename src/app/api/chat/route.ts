@@ -59,6 +59,11 @@ export async function POST(request: Request) {
         ...(openRouterBody.provider as Record<string, unknown> || {}),
         order: ["Anthropic"],
         allow_fallbacks: false,
+        require_parameters: true,
+      };
+      // Pass Anthropic-specific header through OpenRouter
+      openRouterBody.extra_headers = {
+        "anthropic-beta": "prompt-caching-2024-07-31",
       };
     }
 
@@ -91,11 +96,6 @@ export async function POST(request: Request) {
       "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
       "X-Title": "Personal Chat",
     };
-
-    // Add Anthropic caching beta header
-    if (caching && isAnthropic) {
-      headers["X-Anthropic-Beta"] = "prompt-caching-2024-07-31";
-    }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
