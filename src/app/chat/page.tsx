@@ -295,9 +295,6 @@ export default function ChatPage() {
       cacheStatus = `缓存命中：${cachedTokens} tokens（命中率 ${hitRate}%）`;
     } else if (cacheWriteTokens > 0) {
       cacheStatus = `缓存写入：${cacheWriteTokens} tokens`;
-    } else if (totalInputTokens > 0) {
-      const raw = JSON.stringify(usage.prompt_tokens_details || "none").slice(0, 200);
-      cacheStatus = `[debug] details=${raw}`;
     }
 
     return { cacheStatus, cachedTokens };
