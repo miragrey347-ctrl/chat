@@ -306,8 +306,8 @@ export default function ChatPage() {
           console.error("Failed to save auto memory:", e);
         }
       }
-      // Refresh assistant memories
-      fetchAssistantMemories(assistantId);
+      // Memories saved to DB - will be injected in next conversation
+      // Don't refresh mid-conversation to preserve prompt cache
     }
 
     // Remove tags from display content
