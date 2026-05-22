@@ -259,12 +259,7 @@ export default function ChatPage() {
       parts.push("[助手记忆结束]");
     }
 
-    // Layer 4: Memory extraction instruction
-    if (assistant?.memory_enabled) {
-      const instruction = assistant.memory_system_instruction ||
-        "当你在对话中发现用户的重要个人信息、偏好、习惯、经历或任何值得长期记住的内容时，请在回复末尾用以下格式标记：\n<memory_save>要记住的内容</memory_save>\n该标记不会显示给用户，系统会自动提取并存入记忆库。";
-      parts.push("\n\n" + instruction);
-    }
+    // Layer 4: (removed - no auto memory extraction)
 
     // Layer 5: History summaries
     if (assistant?.history_reference_enabled && historySummaries.length > 0) {
@@ -277,41 +272,6 @@ export default function ChatPage() {
     }
 
     return parts.join("\n");
-  };
-
-  // Process <memory_save> tags from assistant response
-  const processMemorySave = async (content: string, assistantId: string): Promise<string> => {
-    const memoryRegex = /<memory_save>([\s\S]*?)<\/memory_save>/g;
-    const memories: string[] = [];
-    let match;
-
-    while ((match = memoryRegex.exec(content)) !== null) {
-      memories.push(match[1].trim());
-    }
-
-    if (memories.length > 0) {
-      // Save each extracted memory
-      for (const memContent of memories) {
-        try {
-          await fetch("/api/memories", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              assistant_id: assistantId,
-              content: memContent,
-              source: "auto",
-            }),
-          });
-        } catch (e) {
-          console.error("Failed to save auto memory:", e);
-        }
-      }
-      // Memories saved to DB - will be injected in next conversation
-      // Don't refresh mid-conversation to preserve prompt cache
-    }
-
-    // Remove tags from display content
-    return content.replace(memoryRegex, "").trim();
   };
 
   // Extract cache info from usage data
@@ -662,13 +622,6 @@ export default function ChatPage() {
         }
       }
 
-      // Process <memory_save> tags if assistant memory is enabled
-      const assistant = getCurrentAssistantRaw();
-      let cleanedContent = fullContent;
-      if (assistant?.memory_enabled && assistant?.id) {
-        cleanedContent = await processMemorySave(fullContent, assistant.id);
-      }
-
       // Extract cache status
       const { cacheStatus, cachedTokens } = extractCacheInfo(usageData as Record<string, unknown>);
 
@@ -676,7 +629,7 @@ export default function ChatPage() {
       saveMessage({
         conversation_id: convId!,
         role: "assistant",
-        content: cleanedContent,
+        content: fullContent,
         thinking_content: thinkingContent || undefined,
         model_used: model,
         input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
@@ -685,14 +638,14 @@ export default function ChatPage() {
         cached_tokens: cachedTokens || null,
       });
 
-      // Update local message with cleaned content, token stats, and cache info
+      // Update local message with token stats and cache info
       setMessages((prev) => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last.role === "assistant") {
           updated[updated.length - 1] = {
             ...last,
-            content: cleanedContent,
+            content: fullContent,
             input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || last.input_tokens,
             output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || last.output_tokens,
             cache_status: cacheStatus || undefined,
