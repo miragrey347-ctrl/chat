@@ -295,6 +295,12 @@ export default function ChatPage() {
       cacheStatus = `缓存命中：${cachedTokens} tokens（命中率 ${hitRate}%）`;
     } else if (cacheWriteTokens > 0) {
       cacheStatus = `缓存写入：${cacheWriteTokens} tokens`;
+    } else if (totalInputTokens > 0) {
+      // Debug: show raw usage keys to identify where cache data lives
+      const keys = Object.keys(usage).join(", ");
+      const detailKeys = Object.keys(details).join(", ") || "empty";
+      const nativeKeys = Object.keys(nativeUsage).join(", ") || "empty";
+      cacheStatus = `[debug] usage: {${keys}} details: {${detailKeys}} native: {${nativeKeys}}`;
     }
 
     return { cacheStatus, cachedTokens };
