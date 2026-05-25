@@ -426,6 +426,118 @@ export default function ChatPage() {
     await handleRename(convId, title);
   };
 
+  // ── Shared stream processor ──
+  const processStream = async (reader: ReadableStreamDefaultReader<Uint8Array>) => {
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let fullContent = "";
+    let thinkingContent = "";
+    let inThinking = false;
+    let usageData: Record<string, unknown> = {};
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data: ")) continue;
+        const data = trimmed.slice(6);
+        if (data === "[DONE]") continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.usage) {
+            usageData = { ...usageData, ...parsed.usage };
+          }
+          const delta = parsed.choices?.[0]?.delta;
+
+          // Extended thinking
+          if (delta?.reasoning || delta?.reasoning_content) {
+            thinkingContent += delta.reasoning || delta.reasoning_content;
+            setMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last.role === "assistant") {
+                updated[updated.length - 1] = { ...last, thinking_content: thinkingContent };
+              }
+              return updated;
+            });
+          }
+
+          if (delta?.content) {
+            let chunk = delta.content;
+            if (chunk.includes("<thinking>")) { inThinking = true; chunk = chunk.replace("<thinking>", ""); }
+            if (chunk.includes("</thinking>")) { inThinking = false; chunk = chunk.replace("</thinking>", ""); }
+            if (inThinking) thinkingContent += chunk; else fullContent += chunk;
+
+            setMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last.role === "assistant") {
+                updated[updated.length - 1] = { ...last, content: fullContent, thinking_content: thinkingContent || undefined };
+              }
+              return updated;
+            });
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    return { fullContent, thinkingContent, usageData };
+  };
+
+  // Finalize assistant message: extract stats, save to DB, update UI
+  const finalizeAssistantMessage = (convId: string, fullContent: string, thinkingContent: string, usageData: Record<string, unknown>) => {
+    const { cacheStatus, cachedTokens } = extractCacheInfo(usageData);
+    const inputTokens = (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null;
+    const outputTokens = (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null;
+
+    saveMessage({
+      conversation_id: convId,
+      role: "assistant",
+      content: fullContent,
+      thinking_content: thinkingContent || undefined,
+      model_used: model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cache_status: cacheStatus || null,
+      cached_tokens: cachedTokens || null,
+    });
+
+    setMessages((prev) => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last.role === "assistant") {
+        updated[updated.length - 1] = {
+          ...last,
+          content: fullContent,
+          input_tokens: inputTokens || undefined,
+          output_tokens: outputTokens || undefined,
+          cache_status: cacheStatus || undefined,
+          cached_tokens: cachedTokens || undefined,
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleStreamError = (error: unknown) => {
+    if (error instanceof Error && error.name === "AbortError") return;
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    setMessages((prev) => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last.role === "assistant") {
+        updated[updated.length - 1] = { ...last, content: `⚠️ 错误：${errorMessage}` };
+      }
+      return updated;
+    });
+  };
+
   // Send message
   const handleSend = async (content: string, attachments?: Attachment[]) => {
     // Auto-create conversation if none selected
@@ -595,134 +707,10 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader");
 
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullContent = "";
-      let thinkingContent = "";
-      let inThinking = false;
-      let usageData: Record<string, unknown> = {};
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
-
-          const data = trimmed.slice(6);
-          if (data === "[DONE]") continue;
-
-          try {
-            const parsed = JSON.parse(data);
-
-            // Capture usage data - keep full object to preserve cache details
-            if (parsed.usage) {
-              usageData = { ...usageData, ...parsed.usage };
-            }
-
-            const delta = parsed.choices?.[0]?.delta;
-
-            // Extended thinking: reasoning field from OpenRouter/Anthropic
-            if (delta?.reasoning || delta?.reasoning_content) {
-              const reasonChunk = delta.reasoning || delta.reasoning_content;
-              thinkingContent += reasonChunk;
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last.role === "assistant") {
-                  updated[updated.length - 1] = { ...last, thinking_content: thinkingContent };
-                }
-                return updated;
-              });
-            }
-
-            if (delta?.content) {
-              let chunk = delta.content;
-
-              // Fallback: parse <thinking> tags from content
-              if (chunk.includes("<thinking>")) {
-                inThinking = true;
-                chunk = chunk.replace("<thinking>", "");
-              }
-              if (chunk.includes("</thinking>")) {
-                inThinking = false;
-                chunk = chunk.replace("</thinking>", "");
-              }
-
-              if (inThinking) {
-                thinkingContent += chunk;
-              } else {
-                fullContent += chunk;
-              }
-
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last.role === "assistant") {
-                  updated[updated.length - 1] = {
-                    ...last,
-                    content: fullContent,
-                    thinking_content: thinkingContent || undefined,
-                  };
-                }
-                return updated;
-              });
-            }
-          } catch {
-            // skip
-          }
-        }
-      }
-
-      // Extract cache status
-      const { cacheStatus, cachedTokens } = extractCacheInfo(usageData as Record<string, unknown>);
-
-      // Save assistant message to DB with token stats
-      saveMessage({
-        conversation_id: convId!,
-        role: "assistant",
-        content: fullContent,
-        thinking_content: thinkingContent || undefined,
-        model_used: model,
-        input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
-        output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
-        cache_status: cacheStatus || null,
-        cached_tokens: cachedTokens || null,
-      });
-
-      // Update local message with token stats and cache info
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last.role === "assistant") {
-          updated[updated.length - 1] = {
-            ...last,
-            content: fullContent,
-            input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || last.input_tokens,
-            output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || last.output_tokens,
-            cache_status: cacheStatus || undefined,
-            cached_tokens: cachedTokens || undefined,
-          };
-        }
-        return updated;
-      });
+      const { fullContent, thinkingContent, usageData } = await processStream(reader);
+      finalizeAssistantMessage(convId!, fullContent, thinkingContent, usageData);
     } catch (error: unknown) {
-      if (error instanceof Error && error.name === "AbortError") return;
-
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last.role === "assistant") {
-          updated[updated.length - 1] = { ...last, content: `⚠️ 错误：${errorMessage}` };
-        }
-        return updated;
-      });
+      handleStreamError(error);
     } finally {
       setIsStreaming(false);
       abortRef.current = null;
@@ -789,98 +777,10 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader");
 
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullContent = "";
-      let thinkingContent = "";
-      let inThinking = false;
-      let usageData: Record<string, unknown> = {};
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
-          const data = trimmed.slice(6);
-          if (data === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.usage) {
-              usageData = { ...usageData, ...parsed.usage };
-            }
-            const delta = parsed.choices?.[0]?.delta;
-            if (delta?.reasoning || delta?.reasoning_content) {
-              const reasonChunk = delta.reasoning || delta.reasoning_content;
-              thinkingContent += reasonChunk;
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last.role === "assistant") {
-                  updated[updated.length - 1] = { ...last, thinking_content: thinkingContent };
-                }
-                return updated;
-              });
-            }
-            if (delta?.content) {
-              let chunk = delta.content;
-              if (chunk.includes("<thinking>")) { inThinking = true; chunk = chunk.replace("<thinking>", ""); }
-              if (chunk.includes("</thinking>")) { inThinking = false; chunk = chunk.replace("</thinking>", ""); }
-              if (inThinking) thinkingContent += chunk; else fullContent += chunk;
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last.role === "assistant") {
-                  updated[updated.length - 1] = { ...last, content: fullContent, thinking_content: thinkingContent || undefined };
-                }
-                return updated;
-              });
-            }
-          } catch { /* skip */ }
-        }
-      }
-
-      const { cacheStatus: editCS, cachedTokens: editCT } = extractCacheInfo(usageData as Record<string, unknown>);
-
-      saveMessage({
-        conversation_id: currentConvId,
-        role: "assistant",
-        content: fullContent,
-        thinking_content: thinkingContent || undefined,
-        model_used: model,
-        input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
-        output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
-        cache_status: editCS || null,
-        cached_tokens: editCT || null,
-      });
-
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last.role === "assistant") {
-          updated[updated.length - 1] = {
-            ...last,
-            content: fullContent,
-            input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || undefined,
-            output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || undefined,
-            cache_status: editCS || undefined,
-            cached_tokens: editCT || undefined,
-          };
-        }
-        return updated;
-      });
+      const { fullContent, thinkingContent, usageData } = await processStream(reader);
+      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData);
     } catch (error: unknown) {
-      if (error instanceof Error && error.name === "AbortError") return;
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last.role === "assistant") updated[updated.length - 1] = { ...last, content: `⚠️ 错误：${errorMessage}` };
-        return updated;
-      });
+      handleStreamError(error);
     } finally {
       setIsStreaming(false);
       abortRef.current = null;
@@ -941,100 +841,10 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader");
 
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullContent = "";
-      let thinkingContent = "";
-      let inThinking = false;
-      let usageData: Record<string, unknown> = {};
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
-          const data = trimmed.slice(6);
-          if (data === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.usage) {
-              usageData = { ...usageData, ...parsed.usage };
-            }
-            const delta = parsed.choices?.[0]?.delta;
-            if (delta?.reasoning || delta?.reasoning_content) {
-              const reasonChunk = delta.reasoning || delta.reasoning_content;
-              thinkingContent += reasonChunk;
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last.role === "assistant") {
-                  updated[updated.length - 1] = { ...last, thinking_content: thinkingContent };
-                }
-                return updated;
-              });
-            }
-            if (delta?.content) {
-              let chunk = delta.content;
-              if (chunk.includes("<thinking>")) { inThinking = true; chunk = chunk.replace("<thinking>", ""); }
-              if (chunk.includes("</thinking>")) { inThinking = false; chunk = chunk.replace("</thinking>", ""); }
-              if (inThinking) thinkingContent += chunk; else fullContent += chunk;
-
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last.role === "assistant") {
-                  updated[updated.length - 1] = { ...last, content: fullContent, thinking_content: thinkingContent || undefined };
-                }
-                return updated;
-              });
-            }
-          } catch { /* skip */ }
-        }
-      }
-
-      const { cacheStatus: regenCS, cachedTokens: regenCT } = extractCacheInfo(usageData as Record<string, unknown>);
-
-      saveMessage({
-        conversation_id: currentConvId,
-        role: "assistant",
-        content: fullContent,
-        thinking_content: thinkingContent || undefined,
-        model_used: model,
-        input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null,
-        output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null,
-        cache_status: regenCS || null,
-        cached_tokens: regenCT || null,
-      });
-
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last.role === "assistant") {
-          updated[updated.length - 1] = {
-            ...last,
-            content: fullContent,
-            input_tokens: (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || undefined,
-            output_tokens: (usageData.completion_tokens || usageData.output_tokens) as number | undefined || undefined,
-            cache_status: regenCS || undefined,
-            cached_tokens: regenCT || undefined,
-          };
-        }
-        return updated;
-      });
+      const { fullContent, thinkingContent, usageData } = await processStream(reader);
+      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData);
     } catch (error: unknown) {
-      if (error instanceof Error && error.name === "AbortError") return;
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last.role === "assistant") updated[updated.length - 1] = { ...last, content: `⚠️ 错误：${errorMessage}` };
-        return updated;
-      });
+      handleStreamError(error);
     } finally {
       setIsStreaming(false);
       abortRef.current = null;
