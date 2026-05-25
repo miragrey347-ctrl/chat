@@ -465,7 +465,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
             cursor: "pointer",
           }}
         >
-          🗑 删除此助手
+          删除此助手
         </button>
       )}
 

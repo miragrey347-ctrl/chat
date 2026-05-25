@@ -21,7 +21,7 @@ export default function DataBackup({ nav }: { nav: NavContext }) {
             所有数据存储在云端，多设备自动同步。
           </p>
           <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "4px" }}>
-            同步状态：✅ 已同步
+            同步状态：已同步
           </div>
           <button
             onClick={handleSync}
@@ -38,7 +38,7 @@ export default function DataBackup({ nav }: { nav: NavContext }) {
               opacity: syncing ? 0.6 : 1,
             }}
           >
-            {syncing ? "🔄 同步中..." : "🔄 立即同步"}
+            {syncing ? "同步中..." : "立即同步"}
           </button>
         </div>
       </SettingsCard>
@@ -60,7 +60,7 @@ export default function DataBackup({ nav }: { nav: NavContext }) {
               cursor: "pointer",
             }}
           >
-            📤 导出全部数据
+            导出全部数据
           </button>
           <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "8px" }}>
             导出格式：JSON（完整备份，可用于恢复）

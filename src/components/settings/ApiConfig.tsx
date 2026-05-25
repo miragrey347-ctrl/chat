@@ -20,7 +20,7 @@ export default function ApiConfig({ nav }: { nav: NavContext }) {
     setTestResult(null);
     // Simulate test
     setTimeout(() => {
-      setTestResult("✅ 连接成功");
+      setTestResult("连接成功");
       setTesting(false);
     }, 1500);
   };

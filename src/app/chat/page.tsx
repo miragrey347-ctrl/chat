@@ -1468,10 +1468,16 @@ export default function ChatPage() {
               {getConvTitle()} · {messages.length} 条消息
             </p>
             {([
-              { format: "md" as const, label: "Markdown", desc: "保留格式和思维链，适合阅读和存档", icon: "📝" },
-              { format: "json" as const, label: "JSON", desc: "完整结构化数据，含 token 统计，适合备份", icon: "🔧" },
-              { format: "txt" as const, label: "纯文本", desc: "最简格式，兼容性最好", icon: "📄" },
-            ]).map((opt) => (
+              { format: "md" as const, label: "Markdown", desc: "保留格式和思维链，适合阅读和存档" },
+              { format: "json" as const, label: "JSON", desc: "完整结构化数据，含 token 统计，适合备份" },
+              { format: "txt" as const, label: "纯文本", desc: "最简格式，兼容性最好" },
+            ]).map((opt) => {
+              const icons: Record<string, React.ReactNode> = {
+                md: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2-2 2 2M9 11h6"/></svg>,
+                json: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2M14 13h2M8 17h2M14 17h2"/></svg>,
+                txt: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+              };
+              return (
               <button
                 key={opt.format}
                 onClick={() => exportAs(opt.format)}
@@ -1490,7 +1496,7 @@ export default function ChatPage() {
                   touchAction: "manipulation",
                 }}
               >
-                <span style={{ fontSize: "20px" }}>{opt.icon}</span>
+                <span style={{ flexShrink: 0 }}>{icons[opt.format]}</span>
                 <div>
                   <div style={{ fontSize: "15px", fontWeight: 500, color: "var(--text-primary)" }}>
                     {opt.label}
@@ -1500,7 +1506,7 @@ export default function ChatPage() {
                   </div>
                 </div>
               </button>
-            ))}
+              ); })}
             <button
               onClick={() => setShowExportPicker(false)}
               style={{

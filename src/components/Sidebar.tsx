@@ -269,7 +269,7 @@ function ConvItem({
                 flex: 1,
               }}
             >
-              {conv.is_starred && "⭐ "}{conv.title}
+              {conv.is_starred && <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1.5" style={{display:"inline",verticalAlign:"-1px",marginRight:"4px"}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>}{conv.title}
             </span>
           )}
 
@@ -313,15 +313,17 @@ function ConvItem({
           }}
         >
           {[
-            { label: "重命名", action: onRename },
-            { label: conv.is_starred ? "取消星标" : "加星标", action: onStar },
-            { label: "删除", action: onDelete, danger: true },
+            { label: "重命名", action: onRename, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
+            { label: conv.is_starred ? "取消星标" : "加星标", action: onStar, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill={conv.is_starred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
+            { label: "删除", action: onDelete, danger: true, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> },
           ].map((item) => (
             <button
               key={item.label}
               onClick={(e) => { e.stopPropagation(); item.action(); setMenuId(null); }}
               style={{
-                display: "block",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
                 width: "100%",
                 textAlign: "left",
                 padding: "8px 12px",
@@ -333,6 +335,7 @@ function ConvItem({
                 cursor: "pointer",
               }}
             >
+              {item.icon}
               {item.label}
             </button>
           ))}

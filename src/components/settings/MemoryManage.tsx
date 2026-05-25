@@ -229,7 +229,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
                     {m.source === "file" && m.content.startsWith("[文件:") ? (
                       <>
                         <div style={{ fontWeight: 500, marginBottom: "2px" }}>
-                          📄 {m.content.split("]\n")[0].replace("[文件: ", "")}
+                          {m.content.split("]\n")[0].replace("[文件: ", "")}
                         </div>
                         <div style={{ fontSize: "12px", color: "var(--text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "400px" }}>
                           {m.content.split("]\n").slice(1).join("").slice(0, 80)}...
@@ -271,7 +271,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
                       flexShrink: 0,
                     }}
                   >
-                    🗑
+                    ✕
                   </button>
                 </>
               )}

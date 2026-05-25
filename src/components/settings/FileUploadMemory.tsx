@@ -69,7 +69,7 @@ export default function FileUploadMemory({ onFileAdd }: FileUploadMemoryProps) {
       >
         {reading ? "读取中..." : (
           <>
-            📄 点击上传文件
+            点击上传文件
             <div style={{ fontSize: "12px", marginTop: "4px" }}>
               支持 txt/md/json，可多选
             </div>
