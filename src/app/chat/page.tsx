@@ -1234,7 +1234,7 @@ export default function ChatPage() {
         />
       )}
 
-    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg-primary)", position: "relative", zIndex: 1 }}>
 
       {/* Header */}
       <header
