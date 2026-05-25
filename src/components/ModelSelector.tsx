@@ -19,6 +19,8 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
   const [adding, setAdding] = useState(false);
   const [newModelId, setNewModelId] = useState("");
   const [newDisplayName, setNewDisplayName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
         setAdding(false);
+        setEditingId(null);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -74,6 +77,21 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
       await fetchModels();
     } catch (err) {
       console.error("Failed to delete model:", err);
+    }
+  };
+
+  const handleRename = async (id: string) => {
+    if (!editName.trim()) { setEditingId(null); return; }
+    try {
+      await fetch("/api/models", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, display_name: editName.trim() }),
+      });
+      setEditingId(null);
+      await fetchModels();
+    } catch (err) {
+      console.error("Failed to rename model:", err);
     }
   };
 
@@ -124,7 +142,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
           {models.map((m) => (
             <div
               key={m.id}
-              onClick={() => { onChange(m.model_id); setOpen(false); }}
+              onClick={() => { if (!editingId) { onChange(m.model_id); setOpen(false); } }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -132,36 +150,84 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
                 padding: "10px 12px",
                 borderRadius: "8px",
                 background: m.model_id === currentModel ? "var(--accent-muted)" : "transparent",
-                cursor: "pointer",
+                cursor: editingId ? "default" : "pointer",
                 marginBottom: "2px",
               }}
             >
-              <div>
-                <div style={{
-                  fontSize: "13px",
-                  color: m.model_id === currentModel ? "var(--accent)" : "var(--text-primary)",
-                  fontWeight: m.model_id === currentModel ? 600 : 400,
-                }}>
-                  {m.display_name}
-                </div>
-                <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                  {m.model_id}
-                </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {editingId === m.id ? (
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleRename(m.id); if (e.key === "Escape") setEditingId(null); }}
+                    onBlur={() => handleRename(m.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      width: "100%",
+                      background: "var(--bg-input)",
+                      border: "1px solid var(--accent)",
+                      borderRadius: "6px",
+                      padding: "4px 8px",
+                      fontSize: "13px",
+                      color: "var(--text-primary)",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div style={{
+                      fontSize: "13px",
+                      color: m.model_id === currentModel ? "var(--accent)" : "var(--text-primary)",
+                      fontWeight: m.model_id === currentModel ? 600 : 400,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {m.display_name}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {m.model_id}
+                    </div>
+                  </>
+                )}
               </div>
-              <button
-                onClick={(e) => handleDelete(m.id, e)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-tertiary)",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  padding: "4px",
-                  flexShrink: 0,
-                }}
-              >
-                ✕
-              </button>
+              {editingId !== m.id && (
+                <div style={{ display: "flex", alignItems: "center", gap: "2px", flexShrink: 0, marginLeft: "8px" }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingId(m.id); setEditName(m.display_name); }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--text-tertiary)",
+                      cursor: "pointer",
+                      padding: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(m.id, e)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--text-tertiary)",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      padding: "4px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           ))}
 

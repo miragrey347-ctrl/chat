@@ -38,3 +38,22 @@ export async function DELETE(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
+
+export async function PATCH(request: Request) {
+  const supabase = createServiceClient();
+  const { id, display_name } = await request.json();
+
+  if (!id || !display_name) {
+    return NextResponse.json({ error: "id and display_name required" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from("user_models")
+    .update({ display_name })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
