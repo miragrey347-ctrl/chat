@@ -66,13 +66,15 @@ export default function Sidebar({
       {isOpen && (
         <div
           onClick={onClose}
+          onTouchEnd={(e) => { e.preventDefault(); onClose(); }}
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.5)",
             zIndex: 40,
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
           }}
-          className="md:hidden"
         />
       )}
 
