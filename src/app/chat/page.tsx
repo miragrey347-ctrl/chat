@@ -1244,7 +1244,6 @@ export default function ChatPage() {
           padding: "10px 16px",
           paddingTop: "max(10px, env(safe-area-inset-top))",
           borderBottom: "1px solid var(--border-subtle)",
-          position: "relative",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
@@ -1286,10 +1285,6 @@ export default function ChatPage() {
               <path d="M2 4L5 7L8 4" />
             </svg>
           </button>
-        </div>
-
-        {/* Model selector - center */}
-        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
           <ModelSelector currentModel={model} onChange={handleModelChange} />
         </div>
 
