@@ -62,49 +62,46 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="关闭侧边栏"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 40,
-            cursor: "pointer",
-            border: "none",
-            padding: 0,
-            margin: 0,
-            WebkitTapHighlightColor: "transparent",
-            WebkitAppearance: "none",
-          }}
-        />
-      )}
-
-      <aside
+      {/* Full-screen container when open: sidebar on left, tap-to-close area on right */}
+      <div
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          bottom: 0,
-          width: "min(300px, 85vw)",
-          background: "var(--bg-secondary)",
-          borderRight: "1px solid var(--border-subtle)",
+          width: "100vw",
+          height: "100vh",
           zIndex: 50,
-          transform: isOpen ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.25s ease",
-          display: "flex",
-          flexDirection: "column",
-          overflowY: "auto",
+          pointerEvents: isOpen ? "auto" : "none",
         }}
       >
+        {/* Dark overlay - covers everything, click closes sidebar */}
+        <div
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: isOpen ? "rgba(0,0,0,0.5)" : "transparent",
+            transition: "background 0.25s ease",
+          }}
+        />
+
+        {/* Sidebar panel */}
+        <aside
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: "min(300px, 85vw)",
+            background: "var(--bg-secondary)",
+            borderRight: "1px solid var(--border-subtle)",
+            transform: isOpen ? "translateX(0)" : "translateX(-100%)",
+            transition: "transform 0.25s ease",
+            display: "flex",
+            flexDirection: "column",
+            overflowY: "auto",
+          }}
+        >
         {/* Header */}
         <div
           style={{
@@ -118,21 +115,37 @@ export default function Sidebar({
           <span style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>
             对话
           </span>
-          <button
-            onClick={() => { onNew(); onClose(); }}
-            style={{
-              background: "var(--accent)",
-              color: "#1a1410",
-              border: "none",
-              borderRadius: "10px",
-              padding: "8px 14px",
-              fontSize: "13px",
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            + 新对话
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button
+              onClick={() => { onNew(); onClose(); }}
+              style={{
+                background: "var(--accent)",
+                color: "#1a1410",
+                border: "none",
+                borderRadius: "10px",
+                padding: "8px 14px",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              + 新对话
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--text-tertiary)",
+                fontSize: "18px",
+                cursor: "pointer",
+                padding: "4px 2px",
+                lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Conversation list */}
@@ -189,6 +202,7 @@ export default function Sidebar({
           )}
         </div>
       </aside>
+      </div>
     </>
   );
 }
