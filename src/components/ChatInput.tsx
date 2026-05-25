@@ -164,7 +164,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="发送消息..."
-        rows={4}
+        rows={1}
         disabled={disabled}
         style={{
           width: "100%",
@@ -174,9 +174,9 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
           outline: "none",
           resize: "none",
           fontSize: "15px",
-          lineHeight: "1.8",
-          padding: "20px 20px 4px 20px",
-          minHeight: "120px",
+          lineHeight: "1.5",
+          padding: "14px 16px 6px 16px",
+          minHeight: "40px",
           maxHeight: "200px",
           boxSizing: "border-box",
           WebkitAppearance: "none",
@@ -201,7 +201,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "4px 16px 16px 16px",
+          padding: "4px 10px 10px 10px",
         }}
       >
         <button
@@ -209,23 +209,31 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
           disabled={disabled}
           style={{
             background: "none",
-            border: "none",
+            border: "1.5px solid var(--text-tertiary)",
+            borderRadius: "50%",
+            width: "28px",
+            height: "28px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             color: "var(--text-tertiary)",
-            fontSize: "20px",
             cursor: disabled ? "default" : "pointer",
-            padding: "8px",
+            padding: 0,
             touchAction: "manipulation",
             opacity: disabled ? 0.4 : 1,
+            flexShrink: 0,
           }}
         >
-          +
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
         </button>
         <button
           onClick={handleSend}
           disabled={!canSend}
           style={{
-            width: "40px",
-            height: "40px",
+            width: "34px",
+            height: "34px",
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
@@ -238,7 +246,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
             transition: "opacity 0.2s",
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="19" x2="12" y2="5" />
             <polyline points="5 12 12 5 19 12" />
           </svg>

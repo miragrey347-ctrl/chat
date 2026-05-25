@@ -109,8 +109,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
           style={{
             position: "absolute",
             top: "calc(100% + 6px)",
-            left: "50%",
-            transform: "translateX(-50%)",
+            left: "0",
             background: "var(--bg-tertiary)",
             border: "1px solid var(--border-color)",
             borderRadius: "14px",

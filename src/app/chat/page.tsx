@@ -1244,43 +1244,52 @@ export default function ChatPage() {
           padding: "10px 16px",
           paddingTop: "max(10px, env(safe-area-inset-top))",
           borderBottom: "1px solid var(--border-subtle)",
+          position: "relative",
         }}
       >
-        {displaySettings.showSidebar ? (
-          <button
-            onClick={() => setSidebarOpen(true)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--text-secondary)",
-              cursor: "pointer",
-              padding: "6px",
-              fontSize: "18px",
-            }}
-          >
-            ☰
-          </button>
-        ) : (
-          <div style={{ width: "30px" }} />
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-          {/* Assistant name */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+          {displaySettings.showSidebar && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                padding: "6px",
+                fontSize: "18px",
+                flexShrink: 0,
+              }}
+            >
+              ☰
+            </button>
+          )}
           <button
             onClick={() => setShowAssistantPicker(true)}
             style={{
               background: "none",
               border: "none",
-              color: "var(--text-secondary)",
-              fontSize: "12px",
+              color: "var(--text-primary)",
+              fontSize: "15px",
+              fontWeight: 600,
               cursor: "pointer",
-              padding: "2px 8px",
+              padding: "2px 4px",
               touchAction: "manipulation",
+              whiteSpace: "nowrap",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
             }}
           >
-            {getCurrentAssistant()?.name || "未选择助手"} ▾
+            {getCurrentAssistant()?.name || "未选择助手"}
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.5 }}>
+              <path d="M2 4L5 7L8 4" />
+            </svg>
           </button>
-          {/* Model selector */}
+        </div>
+
+        {/* Model selector - center */}
+        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
           <ModelSelector currentModel={model} onChange={handleModelChange} />
         </div>
 
