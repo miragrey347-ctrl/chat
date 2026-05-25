@@ -213,29 +213,53 @@ export default function ChatMessage({
           }}
         >
           {/* Thinking block */}
-          {message.thinking_content && (
+          {message.thinking_content && (() => {
+            const estimatedSeconds = Math.max(0.5, Math.round(message.thinking_content.length / 40 * 10) / 10);
+            return (
             <details
-              style={{ marginBottom: "12px" }}
+              style={{
+                marginBottom: "12px",
+                background: "var(--bg-tertiary)",
+                borderRadius: "12px",
+                overflow: "hidden",
+              }}
               open={!ds.autoCollapseThinking}
             >
               <summary style={{
                 cursor: "pointer",
-                fontSize: "12px",
-                color: "var(--text-tertiary)",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "var(--text-secondary)",
                 userSelect: "none",
-                padding: "4px 0",
+                padding: "12px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                listStyle: "none",
               }}>
-                思维过程
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+                  <path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/>
+                  <path d="M9 21h6M10 17v1M14 17v1"/>
+                </svg>
+                <span>深度思考</span>
+                <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
+                  {estimatedSeconds}s
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginLeft:"auto",transition:"transform 0.2s"}}>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
               </summary>
               <div style={{
-                borderLeft: "2px solid var(--text-tertiary)",
-                paddingLeft: "12px",
-                marginTop: "8px",
+                padding: "0 16px 14px",
+                fontSize: "14px",
+                color: "var(--text-secondary)",
+                lineHeight: 1.7,
               }}>
                 {renderContent(message.thinking_content, true)}
               </div>
             </details>
-          )}
+            );
+          })()}
 
           {/* Images */}
           {imageData && imageData.length > 0 && (

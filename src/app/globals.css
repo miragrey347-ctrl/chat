@@ -146,3 +146,9 @@ button, [role="button"], select, input, textarea {
   }
 }
 
+
+/* Hide default details marker */
+summary::-webkit-details-marker { display: none; }
+summary::marker { display: none; }
+summary { list-style: none; }
+details[open] > summary svg:last-child { transform: rotate(180deg); }
