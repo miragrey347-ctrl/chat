@@ -1,11 +1,78 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import type { NavContext } from "@/app/settings/page";
 
 interface SettingsHomeProps {
   nav: NavContext;
 }
+
+/* ── Inline SVG icons (20×20, strokeWidth 1.5, currentColor) ── */
+const I = {
+  palette: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 2a10 10 0 0 1 0 20"/>
+      <circle cx="8" cy="10" r="1.2" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="7.5" r="1.2" fill="currentColor" stroke="none"/>
+      <circle cx="16" cy="10" r="1.2" fill="currentColor" stroke="none"/>
+      <circle cx="9" cy="14.5" r="1.2" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+  display: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2"/>
+      <path d="M8 21h8M12 17v4"/>
+    </svg>
+  ),
+  sparkles: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>
+      <path d="M18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z"/>
+    </svg>
+  ),
+  cube: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>
+    </svg>
+  ),
+  key: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+    </svg>
+  ),
+  search: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="M21 21l-4.35-4.35"/>
+    </svg>
+  ),
+  volume: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    </svg>
+  ),
+  database: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <ellipse cx="12" cy="5" rx="9" ry="3"/>
+      <path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3"/>
+      <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+    </svg>
+  ),
+  globe: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+  ),
+  cloud: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+    </svg>
+  ),
+};
 
 // Reusable setting row component
 function SettingRow({
@@ -14,7 +81,7 @@ function SettingRow({
   value,
   onClick,
 }: {
-  icon: string;
+  icon: ReactNode;
   label: string;
   value?: string;
   onClick: () => void;
@@ -40,7 +107,7 @@ function SettingRow({
       }}
     >
       <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <span style={{ fontSize: "18px", width: "24px", textAlign: "center" }}>{icon}</span>
+        <span style={{ width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)", flexShrink: 0 }}>{icon}</span>
         <span>{label}</span>
       </span>
       <span
@@ -174,20 +241,20 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
         <SectionTitle>通用设置</SectionTitle>
         <Card>
           <SettingRow
-            icon="🎨"
+            icon={I.palette}
             label="颜色模式"
             value={currentTheme}
             onClick={() => setShowThemePicker(true)}
           />
           <Divider />
           <SettingRow
-            icon="🖥"
+            icon={I.display}
             label="显示设置"
             onClick={() => nav.push({ id: "display", title: "显示设置" })}
           />
           <Divider />
           <SettingRow
-            icon="🤖"
+            icon={I.sparkles}
             label="助手"
             onClick={() => nav.push({ id: "assistants", title: "助手" })}
           />
@@ -197,31 +264,31 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
         <SectionTitle>模型与服务</SectionTitle>
         <Card>
           <SettingRow
-            icon="🧠"
+            icon={I.cube}
             label="默认模型"
             onClick={() => nav.push({ id: "default-model", title: "默认模型" })}
           />
           <Divider />
           <SettingRow
-            icon="🔑"
+            icon={I.key}
             label="API 配置"
             onClick={() => nav.push({ id: "api-config", title: "API 配置" })}
           />
           <Divider />
           <SettingRow
-            icon="🔍"
+            icon={I.search}
             label="搜索服务"
             onClick={() => nav.push({ id: "search-service", title: "搜索服务" })}
           />
           <Divider />
           <SettingRow
-            icon="🔊"
+            icon={I.volume}
             label="语音服务"
             onClick={() => nav.push({ id: "voice-service", title: "语音服务" })}
           />
           <Divider />
           <SettingRow
-            icon="💾"
+            icon={I.database}
             label="全局记忆"
             onClick={() => nav.push({ id: "global-memory", title: "全局记忆" })}
           />
@@ -231,14 +298,14 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
         <SectionTitle>数据设置</SectionTitle>
         <Card>
           <SettingRow
-            icon="🌐"
+            icon={I.globe}
             label="应用语言"
             value={currentLang}
             onClick={() => setShowLangPicker(true)}
           />
           <Divider />
           <SettingRow
-            icon="📦"
+            icon={I.cloud}
             label="数据备份与同步"
             onClick={() => nav.push({ id: "data-backup", title: "数据备份与同步" })}
           />
