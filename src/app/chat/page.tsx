@@ -1218,8 +1218,8 @@ export default function ChatPage() {
   }, [messages.length, isStreaming, showShortcuts, showExportPicker, showAssistantPicker, sidebarOpen]);
 
   return (
-    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
-      {/* Sidebar */}
+    <>
+      {/* Sidebar - rendered outside main container for reliable iOS overlay */}
       {displaySettings.showSidebar && (
         <Sidebar
           conversations={conversations}
@@ -1233,6 +1233,8 @@ export default function ChatPage() {
           onClose={() => setSidebarOpen(false)}
         />
       )}
+
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg-primary)" }}>
 
       {/* Header */}
       <header
@@ -1726,5 +1728,6 @@ export default function ChatPage() {
         </div>
       </footer>
     </div>
+    </>
   );
 }
