@@ -26,7 +26,7 @@ export default function SettingsPageLayout({ nav, title, children }: SettingsPag
           alignItems: "center",
           gap: "8px",
           padding: "16px",
-          paddingTop: "max(16px, env(safe-area-inset-top))",
+          paddingTop: "16px",
         }}
       >
         <button

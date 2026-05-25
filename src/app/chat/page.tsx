@@ -1242,7 +1242,6 @@ export default function ChatPage() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "10px 16px",
-          paddingTop: "max(10px, env(safe-area-inset-top))",
           borderBottom: "1px solid var(--border-subtle)",
         }}
       >
@@ -1347,7 +1346,7 @@ export default function ChatPage() {
               background: "var(--bg-secondary)",
               borderRadius: "16px 16px 0 0",
               padding: "24px 20px",
-              paddingBottom: "max(24px, env(safe-area-inset-bottom))",
+              paddingBottom: "24px",
               zIndex: 210,
               animation: "sheet-up 250ms ease",
             }}
@@ -1455,7 +1454,7 @@ export default function ChatPage() {
               background: "var(--bg-secondary)",
               borderRadius: "16px 16px 0 0",
               padding: "24px 20px",
-              paddingBottom: "max(24px, env(safe-area-inset-bottom))",
+              paddingBottom: "24px",
               zIndex: 210,
               animation: "sheet-up 250ms ease",
             }}
@@ -1646,7 +1645,7 @@ export default function ChatPage() {
       </main>
 
       {/* Input */}
-      <footer style={{ flexShrink: 0, padding: "8px 16px", paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
+      <footer style={{ flexShrink: 0, padding: "8px 16px 12px" }}>
         <div style={{ maxWidth: "768px", margin: "0 auto" }}>
           {/* Quick messages */}
           {(() => {

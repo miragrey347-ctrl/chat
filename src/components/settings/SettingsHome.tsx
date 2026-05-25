@@ -207,7 +207,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
           alignItems: "center",
           gap: "8px",
           padding: "16px",
-          paddingTop: "max(16px, env(safe-area-inset-top))",
+          paddingTop: "16px",
         }}
       >
         <button
@@ -465,7 +465,7 @@ function BottomSheet({
           background: "var(--bg-secondary)",
           borderRadius: "16px 16px 0 0",
           padding: "24px 20px",
-          paddingBottom: "max(24px, env(safe-area-inset-bottom))",
+          paddingBottom: "24px",
           zIndex: 310,
           animation: "sheet-up 280ms cubic-bezier(0.25, 0.1, 0.25, 1)",
         }}

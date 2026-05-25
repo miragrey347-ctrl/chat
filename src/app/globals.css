@@ -125,13 +125,6 @@ html, body {
 
 /* ── Responsive ── */
 
-/* Safe area padding */
-html, body {
-  padding-top: env(safe-area-inset-top);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
-
 /* Touch optimization */
 button, [role="button"], select, input, textarea {
   touch-action: manipulation;
@@ -153,7 +146,3 @@ button, [role="button"], select, input, textarea {
   }
 }
 
-/* Prevent overscroll bounce */
-html {
-  overscroll-behavior: none;
-}
