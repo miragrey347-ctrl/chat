@@ -12,12 +12,11 @@ interface SettingsHomeProps {
 const I = {
   palette: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M12 2a10 10 0 0 1 0 20"/>
-      <circle cx="8" cy="10" r="1.2" fill="currentColor" stroke="none"/>
-      <circle cx="12" cy="7.5" r="1.2" fill="currentColor" stroke="none"/>
-      <circle cx="16" cy="10" r="1.2" fill="currentColor" stroke="none"/>
-      <circle cx="9" cy="14.5" r="1.2" fill="currentColor" stroke="none"/>
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.97-4.48-9-10-9z"/>
+      <circle cx="7.5" cy="11.5" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="10.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="15" cy="7.5" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="17.5" cy="11.5" r="1.5" fill="currentColor" stroke="none"/>
     </svg>
   ),
   display: (
