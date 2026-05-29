@@ -575,9 +575,31 @@ export default function ChatPage() {
       const fileParts = fileAttachments.map((f) => `[文件: ${f.name}]\n${f.data}`).join("\n\n");
       displayContent = displayContent ? `${displayContent}\n\n${fileParts}` : fileParts;
     }
+
+    // Upload images to Supabase Storage and build markdown image tags
+    const uploadedUrls: string[] = [];
     if (imageAttachments.length > 0) {
-      const imgNames = imageAttachments.map((a) => `[图片: ${a.name}]`).join(" ");
-      displayContent = displayContent ? `${displayContent}\n${imgNames}` : imgNames;
+      const imgParts: string[] = [];
+      for (const img of imageAttachments) {
+        try {
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: img.name, base64: img.data, mimeType: img.mimeType }),
+          });
+          const data = await res.json();
+          if (data.url) {
+            uploadedUrls.push(data.url);
+            imgParts.push(`![${img.name}](${data.url})`);
+          } else {
+            imgParts.push(`[图片: ${img.name}]`);
+          }
+        } catch {
+          imgParts.push(`[图片: ${img.name}]`);
+        }
+      }
+      const imgText = imgParts.join(" ");
+      displayContent = displayContent ? `${displayContent}\n${imgText}` : imgText;
     }
 
     // User message
@@ -589,9 +611,9 @@ export default function ChatPage() {
       created_at: new Date().toISOString(),
     };
 
-    // Store image data for display in current session
+    // Store image data for immediate display (base64 for current session)
     if (imageAttachments.length > 0) {
-      imageDataRef.current[userMsg.id] = imageAttachments.map((a) => a.data);
+      imageDataRef.current[userMsg.id] = uploadedUrls.length > 0 ? uploadedUrls : imageAttachments.map((a) => a.data);
     }
 
     const updatedMessages = [...messages, userMsg];

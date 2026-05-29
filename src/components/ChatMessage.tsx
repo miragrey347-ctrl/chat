@@ -263,24 +263,35 @@ export default function ChatMessage({
             );
           })()}
 
-          {/* Images */}
-          {imageData && imageData.length > 0 && (
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
-              {imageData.map((src, idx) => (
-                <img
-                  key={idx}
-                  src={src}
-                  alt=""
-                  style={{
-                    maxWidth: "280px",
-                    maxHeight: "280px",
-                    borderRadius: "12px",
-                    objectFit: "cover",
-                  }}
-                />
-              ))}
-            </div>
-          )}
+          {/* Images - from content URLs or imageData prop */}
+          {(() => {
+            // Extract markdown image URLs from content: ![name](url)
+            const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+            const contentUrls: string[] = [];
+            let match;
+            while ((match = imgRegex.exec(message.content)) !== null) {
+              contentUrls.push(match[2]);
+            }
+            const images = contentUrls.length > 0 ? contentUrls : (imageData || []);
+            if (images.length === 0) return null;
+            return (
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
+                {images.map((src, idx) => (
+                  <img
+                    key={idx}
+                    src={src}
+                    alt=""
+                    style={{
+                      maxWidth: "280px",
+                      maxHeight: "280px",
+                      borderRadius: "12px",
+                      objectFit: "cover",
+                    }}
+                  />
+                ))}
+              </div>
+            );
+          })()}
 
           {/* Content */}
           {editing ? (
@@ -336,7 +347,7 @@ export default function ChatMessage({
               </div>
             </div>
           ) : (
-            renderContent(message.content)
+            renderContent(message.content.replace(/!\[[^\]]*\]\([^)]+\)/g, "").replace(/\[图片: [^\]]+\]/g, "").trim())
           )}
         </div>
       </div>
