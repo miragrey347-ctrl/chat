@@ -231,7 +231,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
             color: "var(--text-primary)",
           }}
         >
-          设置
+          {t("settings")}
         </h1>
       </div>
 
