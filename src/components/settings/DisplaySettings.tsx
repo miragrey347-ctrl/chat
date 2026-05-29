@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
@@ -41,6 +42,7 @@ const DEFAULTS: Record<string, boolean> = {
 };
 
 export default function DisplaySettings({ nav }: { nav: NavContext }) {
+  const { t } = useLocale();
   const [settings, setSettings] = useState<Record<string, boolean>>(DEFAULTS);
 
   useEffect(() => {
@@ -60,39 +62,39 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
       <SectionLabel>聊天项显示</SectionLabel>
       <SettingsCard>
         <SettingsToggleRow
-          label="显示用户和助手头像"
+          label={t("showAvatar")}
           value={settings.showAvatars}
           onChange={() => toggle("showAvatars")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="显示用户和模型名称"
+          label={t("showNames")}
           value={settings.showNames}
           onChange={() => toggle("showNames")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="显示时间戳"
+          label={t("showTimestamps")}
           description="格式：2026-05-14 18:12"
           value={settings.showTimestamps}
           onChange={() => toggle("showTimestamps")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="显示 Token 统计"
+          label={t("showTokenStats")}
           value={settings.showTokenStats}
           onChange={() => toggle("showTokenStats")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="显示费用估算"
+          label={t("showCostEstimate")}
           description="依赖 Token 统计开启"
           value={settings.showCostEstimate}
           onChange={() => toggle("showCostEstimate")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="显示缓存状态"
+          label={t("showCacheStatus")}
           description="显示缓存命中/写入及命中率"
           value={settings.showCacheStatus}
           onChange={() => toggle("showCacheStatus")}
@@ -102,25 +104,25 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
       <SectionLabel>渲染设置</SectionLabel>
       <SettingsCard>
         <SettingsToggleRow
-          label="思维链 Markdown 渲染"
+          label={t("thinkingMarkdown")}
           value={settings.thinkingMarkdown}
           onChange={() => toggle("thinkingMarkdown")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="用户消息 Markdown 渲染"
+          label={t("userMarkdown")}
           value={settings.userMarkdown}
           onChange={() => toggle("userMarkdown")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="助手消息 Markdown 渲染"
+          label={t("assistantMarkdown")}
           value={settings.assistantMarkdown}
           onChange={() => toggle("assistantMarkdown")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="LaTeX 渲染"
+          label={t("latexRendering")}
           description="识别 $...$ 和 $$...$$ 公式"
           value={settings.latexRendering}
           onChange={() => toggle("latexRendering")}
@@ -130,20 +132,20 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
       <SectionLabel>行为与启动</SectionLabel>
       <SettingsCard>
         <SettingsToggleRow
-          label="自动折叠思维链"
+          label={t("autoCollapseThinking")}
           description="开启后思维链默认折叠，点击可展开"
           value={settings.autoCollapseThinking}
           onChange={() => toggle("autoCollapseThinking")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="显示侧边栏"
+          label={t("showSidebarLabel")}
           value={settings.showSidebar}
           onChange={() => toggle("showSidebar")}
         />
         <SettingsDivider />
         <SettingsToggleRow
-          label="回车键换行"
+          label={t("enterNewline")}
           description="开启后回车=换行，使用发送按钮发送消息。所有设备行为统一"
           value={settings.enterToNewline}
           onChange={() => toggle("enterToNewline")}

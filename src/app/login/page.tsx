@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -6,6 +7,7 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const { t } = useLocale();
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
   const router = useRouter();
@@ -25,7 +27,7 @@ export default function LoginPage() {
       if (res.ok) {
         router.push("/chat");
       } else {
-        setError("密码错误");
+        setError(t("loginError"));
       }
     } catch {
       setError("连接失败");
@@ -116,7 +118,7 @@ export default function LoginPage() {
               border: "none",
             }}
           >
-            {loading ? "验证中..." : "进入"}
+            {loading ? "验证中..." : t("loginButton")}
           </button>
         </div>
       </form>

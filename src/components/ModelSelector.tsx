@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useRef, useEffect } from "react";
 
@@ -19,6 +20,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
   const [adding, setAdding] = useState(false);
   const [newModelId, setNewModelId] = useState("");
   const [newDisplayName, setNewDisplayName] = useState("");
+  const { t } = useLocale();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -238,7 +240,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
             <div style={{ padding: "8px" }}>
               <input
                 autoFocus
-                placeholder="显示名称，如 Claude Sonnet 4"
+                placeholder={t("displayNamePlaceholder")}
                 value={newDisplayName}
                 onChange={(e) => setNewDisplayName(e.target.value)}
                 style={{
@@ -255,7 +257,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
                 }}
               />
               <input
-                placeholder="模型 ID，如 anthropic/claude-sonnet-4"
+                placeholder={t("modelIdPlaceholder")}
                 value={newModelId}
                 onChange={(e) => setNewModelId(e.target.value)}
                 style={{
@@ -323,7 +325,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
                 fontWeight: 500,
               }}
             >
-              + 添加模型
+              {t("addModel")}
             </button>
           )}
         </div>

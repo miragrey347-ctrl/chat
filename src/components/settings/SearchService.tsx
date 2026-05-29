@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
@@ -10,6 +11,7 @@ import SettingsPageLayout, {
 } from "./SettingsPageLayout";
 
 export default function SearchService({ nav }: { nav: NavContext }) {
+  const { t } = useLocale();
   const [enabled, setEnabled] = useState(false);
   const [maxResults, setMaxResults] = useState("5");
 

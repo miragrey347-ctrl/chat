@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type ReactNode } from "react";
 import type { NavContext } from "@/app/settings/page";
+import { useLocale } from "@/lib/i18n";
 
 interface SettingsHomeProps {
   nav: NavContext;
@@ -172,19 +173,19 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("深色");
-  const [currentLang, setCurrentLang] = useState("简体中文");
 
-  const themeMap: Record<string, string> = { "深色": "dark", "浅色": "light", "跟随系统": "system" };
-  const themeMapReverse: Record<string, string> = { dark: "深色", light: "浅色", system: "跟随系统" };
+  const { locale, setLocale, t } = useLocale();
+  const currentLang = locale === "en" ? "English" : "简体中文";
+
+  const themeLabels: Record<string, string> = { dark: t("dark"), light: t("light"), system: t("followSystem") };
 
   useEffect(() => {
     const saved = localStorage.getItem("color-mode") || "dark";
-    setCurrentTheme(themeMapReverse[saved] || "深色");
+    setCurrentTheme(saved);
   }, []);
 
-  const applyTheme = (label: string) => {
-    const value = themeMap[label] || "dark";
-    setCurrentTheme(label);
+  const applyTheme = (value: string) => {
+    setCurrentTheme(value);
     localStorage.setItem("color-mode", value);
     document.documentElement.setAttribute("data-theme", value);
     setShowThemePicker(false);
@@ -238,83 +239,83 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
       {/* Scrollable content */}
       <div style={{ flex: 1, overflowY: "auto", paddingBottom: "40px" }}>
         {/* ── 通用设置 ── */}
-        <SectionTitle>通用设置</SectionTitle>
+        <SectionTitle>{t("general")}</SectionTitle>
         <Card>
           <SettingRow
             icon={I.palette}
-            label="颜色模式"
-            value={currentTheme}
+            label={t("colorMode")}
+            value={themeLabels[currentTheme] || currentTheme}
             onClick={() => setShowThemePicker(true)}
           />
           <Divider />
           <SettingRow
             icon={I.display}
-            label="显示设置"
-            onClick={() => nav.push({ id: "display", title: "显示设置" })}
+            label={t("displaySettings")}
+            onClick={() => nav.push({ id: "display", title: t("displaySettings") })}
           />
           <Divider />
           <SettingRow
             icon={I.sparkles}
-            label="助手"
-            onClick={() => nav.push({ id: "assistants", title: "助手" })}
+            label={t("assistants")}
+            onClick={() => nav.push({ id: "assistants", title: t("assistants") })}
           />
         </Card>
 
         {/* ── 模型与服务 ── */}
-        <SectionTitle>模型与服务</SectionTitle>
+        <SectionTitle>{t("modelsAndServices")}</SectionTitle>
         <Card>
           <SettingRow
             icon={I.cube}
-            label="默认模型"
-            onClick={() => nav.push({ id: "default-model", title: "默认模型" })}
+            label={t("defaultModel")}
+            onClick={() => nav.push({ id: "default-model", title: t("defaultModel") })}
           />
           <Divider />
           <SettingRow
             icon={I.key}
-            label="API 配置"
-            onClick={() => nav.push({ id: "api-config", title: "API 配置" })}
+            label={t("apiConfig")}
+            onClick={() => nav.push({ id: "api-config", title: t("apiConfig") })}
           />
           <Divider />
           <SettingRow
             icon={I.search}
-            label="搜索服务"
-            onClick={() => nav.push({ id: "search-service", title: "搜索服务" })}
+            label={t("searchService")}
+            onClick={() => nav.push({ id: "search-service", title: t("searchService") })}
           />
           <Divider />
           <SettingRow
             icon={I.volume}
-            label="语音服务"
-            onClick={() => nav.push({ id: "voice-service", title: "语音服务" })}
+            label={t("voiceService")}
+            onClick={() => nav.push({ id: "voice-service", title: t("voiceService") })}
           />
           <Divider />
           <SettingRow
             icon={I.database}
-            label="全局记忆"
-            onClick={() => nav.push({ id: "global-memory", title: "全局记忆" })}
+            label={t("globalMemory")}
+            onClick={() => nav.push({ id: "global-memory", title: t("globalMemory") })}
           />
         </Card>
 
         {/* ── 数据设置 ── */}
-        <SectionTitle>数据设置</SectionTitle>
+        <SectionTitle>{t("dataSettings")}</SectionTitle>
         <Card>
           <SettingRow
             icon={I.globe}
-            label="应用语言"
+            label={t("appLanguage")}
             value={currentLang}
             onClick={() => setShowLangPicker(true)}
           />
           <Divider />
           <SettingRow
             icon={I.cloud}
-            label="数据备份与同步"
-            onClick={() => nav.push({ id: "data-backup", title: "数据备份与同步" })}
+            label={t("dataBackup")}
+            onClick={() => nav.push({ id: "data-backup", title: t("dataBackup") })}
           />
         </Card>
       </div>
 
       {/* ── Theme Picker Modal ── */}
       {showThemePicker && (
-        <BottomSheet onClose={() => setShowThemePicker(false)}>
+        <BottomSheet onClose={() => setShowThemePicker(false)} cancelLabel={t("cancel")}>
           <h3
             style={{
               fontSize: "16px",
@@ -325,10 +326,10 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
           >
             颜色模式
           </h3>
-          {["跟随系统", "深色", "浅色"].map((t) => (
+          {(["system", "dark", "light"] as const).map((themeKey) => (
             <button
-              key={t}
-              onClick={() => applyTheme(t)}
+              key={themeKey}
+              onClick={() => applyTheme(themeKey)}
               style={{
                 width: "100%",
                 display: "flex",
@@ -343,19 +344,19 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
                 cursor: "pointer",
               }}
             >
-              <span>{t}</span>
+              <span>{themeLabels[themeKey]}</span>
               <span
                 style={{
                   width: "20px",
                   height: "20px",
                   borderRadius: "50%",
-                  border: `2px solid ${currentTheme === t ? "var(--accent)" : "var(--border-color)"}`,
+                  border: `2px solid ${currentTheme === themeKey ? "var(--accent)" : "var(--border-color)"}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                {currentTheme === t && (
+                {currentTheme === themeKey && (
                   <span
                     style={{
                       width: "10px",
@@ -373,7 +374,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
 
       {/* ── Language Picker Modal ── */}
       {showLangPicker && (
-        <BottomSheet onClose={() => setShowLangPicker(false)}>
+        <BottomSheet onClose={() => setShowLangPicker(false)} cancelLabel={t("cancel")}>
           <h3
             style={{
               fontSize: "16px",
@@ -382,13 +383,13 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
               marginBottom: "16px",
             }}
           >
-            应用语言
+            {t("appLanguage")}
           </h3>
-          {["简体中文", "English"].map((l) => (
+          {([{ label: "简体中文", value: "zh" as const }, { label: "English", value: "en" as const }]).map((l) => (
             <button
-              key={l}
+              key={l.value}
               onClick={() => {
-                setCurrentLang(l);
+                setLocale(l.value);
                 setShowLangPicker(false);
               }}
               style={{
@@ -405,19 +406,19 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
                 cursor: "pointer",
               }}
             >
-              <span>{l}</span>
+              <span>{l.label}</span>
               <span
                 style={{
                   width: "20px",
                   height: "20px",
                   borderRadius: "50%",
-                  border: `2px solid ${currentLang === l ? "var(--accent)" : "var(--border-color)"}`,
+                  border: `2px solid ${locale === l.value ? "var(--accent)" : "var(--border-color)"}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                {currentLang === l && (
+                {locale === l.value && (
                   <span
                     style={{
                       width: "10px",
@@ -440,9 +441,11 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
 function BottomSheet({
   children,
   onClose,
+  cancelLabel = "取消",
 }: {
   children: React.ReactNode;
   onClose: () => void;
+  cancelLabel?: string;
 }) {
   return (
     <>

@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState } from "react";
 import type { Conversation } from "@/lib/types";
@@ -15,18 +16,19 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-function timeAgo(dateStr: string) {
+function timeAgo(dateStr: string, locale: string = "zh") {
   const now = Date.now();
   const d = new Date(dateStr).getTime();
   const diff = now - d;
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "刚刚";
-  if (mins < 60) return `${mins}分钟前`;
+  const isEn = locale === "en";
+  if (mins < 1) return isEn ? "Just now" : "刚刚";
+  if (mins < 60) return isEn ? `${mins} min ago` : `${mins}分钟前`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}小时前`;
+  if (hrs < 24) return isEn ? `${hrs} hr ago` : `${hrs}小时前`;
   const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}天前`;
-  return new Date(dateStr).toLocaleDateString("zh-CN");
+  if (days < 30) return isEn ? `${days}d ago` : `${days}天前`;
+  return new Date(dateStr).toLocaleDateString(isEn ? "en-US" : "zh-CN");
 }
 
 export default function Sidebar({
@@ -43,6 +45,7 @@ export default function Sidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [menuId, setMenuId] = useState<string | null>(null);
+  const { t } = useLocale();
 
   const handleRename = (conv: Conversation) => {
     setEditingId(conv.id);
@@ -129,7 +132,7 @@ export default function Sidebar({
                 cursor: "pointer",
               }}
             >
-              + 新对话
+              {t("newChat")}
             </button>
             <button
               onClick={onClose}
@@ -197,7 +200,7 @@ export default function Sidebar({
 
           {conversations.length === 0 && (
             <p style={{ textAlign: "center", color: "var(--text-tertiary)", fontSize: "13px", padding: "40px 0" }}>
-              暂无对话
+              {t("noConversations")}
             </p>
           )}
         </div>
@@ -224,6 +227,7 @@ function ConvItem({
   onStar: () => void;
   onDelete: () => void;
 }) {
+  const { locale, t } = useLocale();
   return (
     <div style={{ position: "relative" }}>
       <div
@@ -292,7 +296,7 @@ function ConvItem({
         </div>
 
         <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "4px" }}>
-          {timeAgo(conv.updated_at)}
+          {timeAgo(conv.updated_at, locale)}
         </div>
       </div>
 
@@ -313,9 +317,9 @@ function ConvItem({
           }}
         >
           {[
-            { label: "重命名", action: onRename, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
-            { label: conv.is_starred ? "取消星标" : "加星标", action: onStar, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill={conv.is_starred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
-            { label: "删除", action: onDelete, danger: true, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> },
+            { label: t("rename"), action: onRename, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
+            { label: conv.is_starred ? t("removeStar") : t("addStar"), action: onStar, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill={conv.is_starred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
+            { label: t("delete"), action: onDelete, danger: true, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> },
           ].map((item) => (
             <button
               key={item.label}

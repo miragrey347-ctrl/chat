@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ export default function ChatPage() {
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [searching, setSearching] = useState(false);
   const [thinkingMode, setThinkingMode] = useState(false);
+  const { t } = useLocale();
   const [thinkingBudget, setThinkingBudget] = useState(10000);
 
   // Load search enabled from settings
@@ -1091,7 +1093,7 @@ export default function ChatPage() {
               gap: "4px",
             }}
           >
-            {getCurrentAssistant()?.name || "未选择助手"}
+            {getCurrentAssistant()?.name || t("noAssistant")}
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.5 }}>
               <path d="M2 4L5 7L8 4" />
             </svg>
@@ -1278,9 +1280,9 @@ export default function ChatPage() {
               {getConvTitle()} · {messages.length} 条消息
             </p>
             {([
-              { format: "md" as const, label: "Markdown", desc: "保留格式和思维链，适合阅读和存档" },
-              { format: "json" as const, label: "JSON", desc: "完整结构化数据，含 token 统计，适合备份" },
-              { format: "txt" as const, label: "纯文本", desc: "最简格式，兼容性最好" },
+              { format: "md" as const, label: t("markdown"), desc: t("markdownDesc") },
+              { format: "json" as const, label: "JSON", desc: t("jsonDesc") },
+              { format: "txt" as const, label: t("plainText"), desc: t("plainTextDesc") },
             ]).map((opt) => {
               const icons: Record<string, React.ReactNode> = {
                 md: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2-2 2 2M9 11h6"/></svg>,
@@ -1362,11 +1364,11 @@ export default function ChatPage() {
               快捷键
             </h3>
             {[
-              ["⌘/Ctrl + N", "新建对话"],
-              ["⌘/Ctrl + B", "切换侧边栏"],
+              ["⌘/Ctrl + N", t("newConversation")],
+              ["⌘/Ctrl + B", t("toggleSidebar")],
               ["⌘/Ctrl + I", "聚焦输入框"],
-              ["⌘/Ctrl + E", "导出对话"],
-              ["⌘/Ctrl + ⇧ + S", "打开设置"],
+              ["⌘/Ctrl + E", t("exportChat")],
+              ["⌘/Ctrl + ⇧ + S", t("openSettings")],
               ["⌘/Ctrl + /", "显示快捷键"],
               ["Esc", "关闭弹窗 / 停止生成"],
             ].map(([key, desc]) => (
@@ -1441,7 +1443,7 @@ export default function ChatPage() {
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               <p style={{ fontSize: "14px", color: "var(--text-tertiary)" }}>
-                发送一条消息开始对话
+                {t("emptyChat")}
               </p>
             </div>
           )}
@@ -1514,7 +1516,7 @@ export default function ChatPage() {
                     transition: "all 0.15s",
                   }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> {searching ? "搜索中..." : searchMode ? "搜索已开启" : "搜索"}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> {searching ? t("searching") : searchMode ? t("searchOn") : t("search")}
                 </button>
               )}
               <button
@@ -1534,11 +1536,11 @@ export default function ChatPage() {
                   transition: "all 0.15s",
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><path d="M9 21h6M10 17v1M14 17v1"/></svg> {thinkingMode ? "深度思考" : "思考"}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><path d="M9 21h6M10 17v1M14 17v1"/></svg> {thinkingMode ? t("deepThink") : t("think")}
               </button>
             </div>
             <p style={{ fontSize: "12px", color: "var(--text-tertiary)", margin: 0 }}>
-              AI 可能会犯错，请核实重要信息
+              {t("aiDisclaimer")}
             </p>
           </div>
         </div>

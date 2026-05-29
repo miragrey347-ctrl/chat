@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
@@ -20,6 +21,7 @@ interface Memory {
 export default function GlobalMemory({ nav }: { nav: NavContext }) {
   const [enabled, setEnabled] = useState(true);
   const [memories, setMemories] = useState<Memory[]>([]);
+  const { t } = useLocale();
   const [newMemory, setNewMemory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -96,8 +98,8 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
     <SettingsPageLayout nav={nav} title="全局记忆">
       <SettingsCard>
         <SettingsToggleRow
-          label="启用全局记忆"
-          description="全局记忆中的内容会注入到所有助手的系统提示词中。适合存放通用的个人信息。"
+          label={t("enableGlobalMemory")}
+          description={t("globalMemoryDesc")}
           value={enabled}
           onChange={(v) => {
             setEnabled(v);
@@ -106,7 +108,7 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
         />
       </SettingsCard>
 
-      <SectionLabel>添加记忆</SectionLabel>
+      <SectionLabel>{ t("addGlobalMemory") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <div style={{ display: "flex", gap: "8px" }}>
@@ -114,7 +116,7 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
               value={newMemory}
               onChange={(e) => setNewMemory(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addMemory()}
-              placeholder="添加一条全局记忆..."
+              placeholder={t("addGlobalMemoryPlaceholder")}
               style={{
                 flex: 1,
                 background: "var(--bg-tertiary)",
@@ -141,7 +143,7 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
                 flexShrink: 0,
               }}
             >
-              添加
+              {t("add")}
             </button>
           </div>
         </div>
@@ -151,7 +153,7 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
         </div>
       </SettingsCard>
 
-      <SectionLabel>已有全局记忆</SectionLabel>
+      <SectionLabel>{ t("existingGlobalMemories") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           {/* Token usage */}
@@ -287,7 +289,7 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
                 padding: "20px 0",
               }}
             >
-              暂无全局记忆
+              {t("noGlobalMemories")}
             </p>
           )}
         </div>

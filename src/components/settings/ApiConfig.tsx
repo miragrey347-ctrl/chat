@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState } from "react";
 import type { NavContext } from "@/app/settings/page";
@@ -9,6 +10,7 @@ import SettingsPageLayout, {
 } from "./SettingsPageLayout";
 
 export default function ApiConfig({ nav }: { nav: NavContext }) {
+  const { t } = useLocale();
   const [apiKey, setApiKey] = useState("••••••••••••••••••••");
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -20,7 +22,7 @@ export default function ApiConfig({ nav }: { nav: NavContext }) {
     setTestResult(null);
     // Simulate test
     setTimeout(() => {
-      setTestResult("连接成功");
+      setTestResult(t("connectionSuccess"));
       setTesting(false);
     }, 1500);
   };
@@ -88,7 +90,7 @@ export default function ApiConfig({ nav }: { nav: NavContext }) {
                 opacity: testing ? 0.6 : 1,
               }}
             >
-              {testing ? "测试中..." : "测试连接"}
+              {testing ? "..." : t("testConnection")}
             </button>
             {testResult && (
               <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
@@ -102,8 +104,8 @@ export default function ApiConfig({ nav }: { nav: NavContext }) {
       <SectionLabel>Prompt Caching</SectionLabel>
       <SettingsCard>
         <SettingsToggleRow
-          label="启用 Prompt Caching"
-          description="对 Anthropic 模型自动启用缓存，减少重复 token 消耗"
+          label={t("enablePromptCaching")}
+          description={t("promptCachingDesc")}
           value={cachingEnabled}
           onChange={setCachingEnabled}
         />

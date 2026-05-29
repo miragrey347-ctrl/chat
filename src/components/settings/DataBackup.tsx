@@ -1,10 +1,12 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState } from "react";
 import type { NavContext } from "@/app/settings/page";
 import SettingsPageLayout, { SettingsCard, SectionLabel } from "./SettingsPageLayout";
 
 export default function DataBackup({ nav }: { nav: NavContext }) {
+  const { t } = useLocale();
   const [syncing, setSyncing] = useState(false);
 
   const handleSync = () => {
@@ -14,14 +16,14 @@ export default function DataBackup({ nav }: { nav: NavContext }) {
 
   return (
     <SettingsPageLayout nav={nav} title="数据备份与同步">
-      <SectionLabel>自动同步</SectionLabel>
+      <SectionLabel>{ t("autoSync") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <p style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "12px", lineHeight: 1.5 }}>
-            所有数据存储在云端，多设备自动同步。
+            {t("autoSyncDesc")}
           </p>
           <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "4px" }}>
-            同步状态：已同步
+            {t("syncStatus")}：{t("synced")}
           </div>
           <button
             onClick={handleSync}
@@ -38,16 +40,16 @@ export default function DataBackup({ nav }: { nav: NavContext }) {
               opacity: syncing ? 0.6 : 1,
             }}
           >
-            {syncing ? "同步中..." : "立即同步"}
+            {syncing ? t("syncing") : t("syncNow")}
           </button>
         </div>
       </SettingsCard>
 
-      <SectionLabel>导出数据</SectionLabel>
+      <SectionLabel>{ t("exportData") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <p style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "12px", lineHeight: 1.5 }}>
-            导出所有对话记录、助手配置和记忆数据。
+            {t("exportDataDesc")}
           </p>
           <button
             style={{
@@ -60,10 +62,10 @@ export default function DataBackup({ nav }: { nav: NavContext }) {
               cursor: "pointer",
             }}
           >
-            导出全部数据
+            {t("exportAll")}
           </button>
           <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "8px" }}>
-            导出格式：JSON（完整备份，可用于恢复）
+            {t("exportFormat")}
           </p>
         </div>
       </SettingsCard>

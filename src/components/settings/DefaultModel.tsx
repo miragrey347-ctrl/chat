@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";

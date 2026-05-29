@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
@@ -33,6 +34,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
   const isNew = !assistantId;
   const [loading, setLoading] = useState(!isNew);
   const [name, setName] = useState("");
+  const { t } = useLocale();
   const [tags, setTags] = useState("");
   const [defaultModel, setDefaultModel] = useState("anthropic/claude-sonnet-4");
   const [streamEnabled, setStreamEnabled] = useState(true);
@@ -465,7 +467,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
             cursor: "pointer",
           }}
         >
-          删除此助手
+          {t("deleteAssistant")}
         </button>
       )}
 

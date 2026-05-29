@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useCallback, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
@@ -10,6 +11,7 @@ import type { DisplaySettings } from "@/lib/useDisplaySettings";
 
 function CodeBlock({ children, className }: { children: string; className?: string }) {
   const [copied, setCopied] = useState(false);
+  const { t } = useLocale();
   const language = className?.replace("language-", "") || "";
 
   const handleCopy = useCallback(() => {
@@ -29,7 +31,7 @@ function CodeBlock({ children, className }: { children: string; className?: stri
         </div>
       )}
       <button onClick={handleCopy} className="code-copy-btn">
-        {copied ? "已复制" : "复制"}
+        {copied ? t("copied") : t("copy")}
       </button>
       <pre className={language ? "!rounded-t-none !mt-0" : ""}>
         <code className={className}>{children}</code>
@@ -66,6 +68,7 @@ export default function ChatMessage({
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [showActions, setShowActions] = useState(false);
+  const { t } = useLocale();
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [copied, setCopied] = useState(false);
@@ -241,7 +244,7 @@ export default function ChatMessage({
                   <path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/>
                   <path d="M9 21h6M10 17v1M14 17v1"/>
                 </svg>
-                <span>深度思考</span>
+                <span>{t("thinkingLabel")}</span>
                 <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400 }}>
                   {estimatedSeconds}s
                 </span>

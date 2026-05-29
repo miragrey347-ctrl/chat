@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useRef } from "react";
 
@@ -7,6 +8,7 @@ interface FileUploadMemoryProps {
 }
 
 export default function FileUploadMemory({ onFileAdd }: FileUploadMemoryProps) {
+  const { t } = useLocale();
   const fileRef = useRef<HTMLInputElement>(null);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,9 +71,9 @@ export default function FileUploadMemory({ onFileAdd }: FileUploadMemoryProps) {
       >
         {reading ? "读取中..." : (
           <>
-            点击上传文件
+            {t("uploadFile")}
             <div style={{ fontSize: "12px", marginTop: "4px" }}>
-              支持 txt/md/json，可多选
+              {t("uploadFileDesc")}
             </div>
           </>
         )}

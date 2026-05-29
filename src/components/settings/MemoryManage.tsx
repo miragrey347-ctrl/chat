@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
@@ -24,6 +25,7 @@ interface MemoryManageProps {
 
 export default function MemoryManage({ nav, assistantId, assistantName }: MemoryManageProps) {
   const [memories, setMemories] = useState<Memory[]>([]);
+  const { t } = useLocale();
   const [newMemory, setNewMemory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -114,7 +116,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
               value={newMemory}
               onChange={(e) => setNewMemory(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addMemory()}
-              placeholder="输入一条记忆..."
+              placeholder={t("addMemoryPlaceholder")}
               style={{
                 flex: 1,
                 background: "var(--bg-tertiary)",
@@ -280,7 +282,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
 
           {memories.length === 0 && (
             <p style={{ textAlign: "center", color: "var(--text-tertiary)", fontSize: "13px", padding: "20px 0" }}>
-              暂无记忆
+              {t("noMemories")}
             </p>
           )}
         </div>

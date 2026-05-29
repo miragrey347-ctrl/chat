@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useRef, useEffect } from "react";
 
@@ -19,6 +20,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { t } = useLocale();
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -163,7 +165,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="发送消息..."
+        placeholder={t("sendMessage")}
         rows={1}
         disabled={disabled}
         style={{

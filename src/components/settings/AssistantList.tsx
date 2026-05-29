@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import type { NavContext } from "@/app/settings/page";
@@ -6,6 +7,7 @@ import type { Assistant } from "@/lib/types";
 import SettingsPageLayout from "./SettingsPageLayout";
 
 export default function AssistantList({ nav }: { nav: NavContext }) {
+  const { t } = useLocale();
   const [assistants, setAssistants] = useState<Assistant[]>([]);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function AssistantList({ nav }: { nav: NavContext }) {
           marginBottom: "16px",
         }}
       >
-        + 新建助手
+        {t("newAssistant")}
       </button>
 
       {/* Assistant list */}
