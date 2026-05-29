@@ -1188,7 +1188,7 @@ export default function ChatPage() {
             }}
           >
             <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "16px" }}>
-              选择助手
+              {t("selectAssistantTitle")}
             </h3>
             {assistants.map((a) => {
               const isCurrent = getCurrentAssistant()?.id === a.id;
@@ -1296,7 +1296,7 @@ export default function ChatPage() {
             }}
           >
             <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
-              导出对话
+              {t("exportChatTitle")}
             </h3>
             <p style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "16px" }}>
               {getConvTitle()} · {messages.length} {t("msgCount")}
