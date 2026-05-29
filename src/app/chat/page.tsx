@@ -296,9 +296,9 @@ export default function ChatPage() {
     let cacheStatus = "";
     if (cachedTokens > 0) {
       const hitRate = totalInputTokens > 0 ? ((cachedTokens / totalInputTokens) * 100).toFixed(1) : "0";
-      cacheStatus = `${t("cacheHitLabel")}：${cachedTokens} tokens（${t("hitRateLabel")} ${hitRate}%）`;
+      cacheStatus = `${t("cacheHitLabel")}: ${cachedTokens} tokens (${t("hitRateLabel")} ${hitRate}%)`;
     } else if (cacheWriteTokens > 0) {
-      cacheStatus = `${t("cacheWriteLabel")}：${cacheWriteTokens} tokens`;
+      cacheStatus = `${t("cacheWriteLabel")}: ${cacheWriteTokens} tokens`;
     }
 
     return { cacheStatus, cachedTokens };
@@ -1235,7 +1235,7 @@ export default function ChatPage() {
                 touchAction: "manipulation",
               }}
             >
-              取消
+              {t("cancel")}
             </button>
           </div>
           <style>{`
@@ -1334,7 +1334,7 @@ export default function ChatPage() {
                 touchAction: "manipulation",
               }}
             >
-              取消
+              {t("cancel")}
             </button>
           </div>
         </>

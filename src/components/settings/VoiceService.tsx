@@ -68,7 +68,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-            模型
+            {t("modelLabel")}
           </label>
           <select value={openaiModel} onChange={(e) => setOpenaiModel(e.target.value)} style={selectStyle}>
             <option value="tts-1">tts-1</option>
@@ -78,7 +78,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-            声音
+            {t("voiceLabel")}
           </label>
           <select value={openaiVoice} onChange={(e) => setOpenaiVoice(e.target.value)} style={selectStyle}>
             {["alloy", "echo", "fable", "onyx", "nova", "shimmer"].map((v) => (
@@ -99,13 +99,13 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-            声音
+            {t("voiceLabel")}
           </label>
           <select style={selectStyle}>
             <option value="rachel">Rachel</option>
           </select>
           <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "4px" }}>
-            从 ElevenLabs 声音库拉取列表
+            {t("pullVoiceList")}
           </p>
         </div>
       </SettingsCard>

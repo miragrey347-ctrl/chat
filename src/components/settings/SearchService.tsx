@@ -44,7 +44,7 @@ export default function SearchService({ nav }: { nav: NavContext }) {
             <SettingsDivider />
             <div style={{ padding: "14px 16px" }}>
               <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-                最大搜索结果数
+                {t("maxSearchResults")}
               </label>
               <input
                 type="number"

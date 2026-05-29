@@ -323,7 +323,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
               marginBottom: "16px",
             }}
           >
-            颜色模式
+            {t("colorModeTitle")}
           </h3>
           {(["system", "dark", "light"] as const).map((themeKey) => (
             <button
@@ -440,7 +440,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
 function BottomSheet({
   children,
   onClose,
-  cancelLabel = "取消",
+  cancelLabel = "Cancel",
 }: {
   children: React.ReactNode;
   onClose: () => void;
@@ -488,7 +488,7 @@ function BottomSheet({
             cursor: "pointer",
           }}
         >
-          取消
+          {cancelLabel}
         </button>
       </div>
       <style>{`

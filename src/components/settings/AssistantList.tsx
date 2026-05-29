@@ -186,7 +186,7 @@ export default function AssistantList({ nav }: { nav: NavContext }) {
             padding: "40px 0",
           }}
         >
-          暂无助手
+          {t("noAssistantsYet")}
         </p>
       )}
     </SettingsPageLayout>

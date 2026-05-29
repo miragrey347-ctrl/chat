@@ -104,7 +104,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
     0
   );
 
-  const title = assistantName ? `管理记忆（${assistantName}）` : "管理记忆";
+  const title = assistantName ? `${t("manageMemoryFor")} (${assistantName})` : t("manageMemoryFor");
 
   return (
     <SettingsPageLayout nav={nav} title={title}>
@@ -143,7 +143,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
                 flexShrink: 0,
               }}
             >
-              添加
+              {t("add")}
             </button>
           </div>
         </div>

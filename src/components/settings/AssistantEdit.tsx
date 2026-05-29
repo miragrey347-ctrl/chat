@@ -150,7 +150,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
     return (
       <SettingsPageLayout nav={nav} title={isNew ? t("newAssistant") : t("editAssistantTitle")}>
         <p style={{ textAlign: "center", color: "var(--text-tertiary)", padding: "40px 0" }}>
-          加载中...
+          {t("loading")}
         </p>
       </SettingsPageLayout>
     );
@@ -163,7 +163,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-            助手名称
+            {t("assistantNameLabel")}
           </label>
           <input
             value={name}
@@ -175,7 +175,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-            标签（可选）
+            {t("tagsOptional")}
           </label>
           <input
             value={tags}
@@ -187,7 +187,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-            默认模型 ID
+            {t("defaultModelId")}
           </label>
           <select
             value={defaultModel}
@@ -252,8 +252,8 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
               marginTop: "6px",
             }}
           >
-            <span>{ t("characters") }：{systemPrompt.length}</span>
-            <span>{ t("tokenEstLabel") }：~{estimateTokens(systemPrompt)}</span>
+            <span>{t("characters")}: {systemPrompt.length}</span>
+            <span>{t("tokenEstimate")}: ~{estimateTokens(systemPrompt)}</span>
           </div>
         </div>
       </SettingsCard>
@@ -321,7 +321,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
               cursor: "pointer",
             }}
           >
-            + 添加快捷消息
+            {t("addQuickMsg")}
           </button>
         </div>
       </SettingsCard>
@@ -343,7 +343,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
                 if (assistantId) {
                   nav.push({
                     id: "memory-manage",
-                    title: `${t("manageMemoryFor")}（${name}）`,
+                    title: `${t("manageMemoryFor")} (${name})`,
                     props: { assistantId, assistantName: name },
                   });
                 }
@@ -430,7 +430,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
             cursor: "pointer",
           }}
         >
-          取消
+          {t("cancel")}
         </button>
         <button
           onClick={handleSave}

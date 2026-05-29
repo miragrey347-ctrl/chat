@@ -23,7 +23,7 @@ export default function DataBackup({ nav }: { nav: NavContext }) {
             {t("autoSyncDesc")}
           </p>
           <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "4px" }}>
-            {t("syncStatus")}：{t("synced")}
+            {t("syncStatus")}: {t("synced")}
           </div>
           <button
             onClick={handleSync}
