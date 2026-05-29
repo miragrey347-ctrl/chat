@@ -70,7 +70,7 @@ export default function LoginPage() {
             className="block text-xs font-medium mb-2 ml-1"
             style={{ color: "var(--text-tertiary)" }}
           >
-            密码
+            {t("passwordLabel")}
           </label>
           <input
             type="password"

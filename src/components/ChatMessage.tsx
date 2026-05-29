@@ -355,9 +355,15 @@ export default function ChatMessage({
           <span>
             {((message.input_tokens || 0) + (message.output_tokens || 0)).toLocaleString()} tokens
           </span>
-          {ds.showCacheStatus && message.cache_status && (
-            <span>{message.cache_status}</span>
-          )}
+          {ds.showCacheStatus && message.cache_status && (() => {
+            const s = message.cache_status;
+            // Translate stored cache status (may be in Chinese or English)
+            const hitMatch = s.match(/(?:缓存命中|Cache hit)[：:]\s*(\d+)\s*tokens.*?(?:命中率|Hit rate)\s*([\d.]+)%/);
+            const writeMatch = s.match(/(?:缓存写入|Cache write)[：:]\s*(\d+)\s*tokens/);
+            if (hitMatch) return <span>{t("cacheHitLabel")}: {hitMatch[1]} tokens ({t("hitRateLabel")} {hitMatch[2]}%)</span>;
+            if (writeMatch) return <span>{t("cacheWriteLabel")}: {writeMatch[1]} tokens</span>;
+            return <span>{s}</span>;
+          })()}
         </div>
       )}
 
