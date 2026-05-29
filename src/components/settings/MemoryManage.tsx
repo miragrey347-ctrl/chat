@@ -108,7 +108,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
 
   return (
     <SettingsPageLayout nav={nav} title={title}>
-      <SectionLabel>添加记忆</SectionLabel>
+      <SectionLabel>{ t("addMemorySection") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <div style={{ display: "flex", gap: "8px" }}>
@@ -153,12 +153,12 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
         </div>
       </SettingsCard>
 
-      <SectionLabel>已有记忆</SectionLabel>
+      <SectionLabel>{ t("existingMemorySection") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           {/* Token usage */}
           <div style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "12px" }}>
-            {memories.length} 条记忆，约 {totalTokens} tokens
+            {memories.length} {t("memoriesCount")} {totalTokens} tokens
           </div>
 
           {/* Memory list */}
@@ -242,7 +242,7 @@ export default function MemoryManage({ nav, assistantId, assistantName }: Memory
                     )}
                   </span>
                   <span style={{ fontSize: "11px", color: "var(--text-tertiary)", flexShrink: 0, marginTop: "2px" }}>
-                    {m.source === "manual" ? "手动" : m.source === "file" ? "文件" : m.source === "auto" ? "自动" : m.source}
+                    {m.source === "manual" ? t("manualSource") : m.source === "file" ? t("fileSource") : m.source === "auto" ? t("autoSource") : m.source}
                   </span>
                   {m.source !== "file" && (
                     <button

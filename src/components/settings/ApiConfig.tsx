@@ -28,7 +28,7 @@ export default function ApiConfig({ nav }: { nav: NavContext }) {
   };
 
   return (
-    <SettingsPageLayout nav={nav} title="API 配置">
+    <SettingsPageLayout nav={nav} title={t("apiConfig")}>
       <SectionLabel>OpenRouter</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>

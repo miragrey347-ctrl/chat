@@ -95,7 +95,7 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
   );
 
   return (
-    <SettingsPageLayout nav={nav} title="全局记忆">
+    <SettingsPageLayout nav={nav} title={t("globalMemory")}>
       <SettingsCard>
         <SettingsToggleRow
           label={t("enableGlobalMemory")}
@@ -158,7 +158,7 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
         <div style={{ padding: "14px 16px" }}>
           {/* Token usage */}
           <div style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "12px" }}>
-            {memories.length} 条记忆，约 {totalTokens} tokens
+            {memories.length} {t("memoriesCount")} {totalTokens} tokens
           </div>
 
           {/* Memory list */}
@@ -242,7 +242,7 @@ export default function GlobalMemory({ nav }: { nav: NavContext }) {
                     )}
                   </span>
                   <span style={{ fontSize: "11px", color: "var(--text-tertiary)", flexShrink: 0, marginTop: "2px" }}>
-                    {m.source === "manual" ? "手动" : m.source === "file" ? "文件" : m.source}
+                    {m.source === "manual" ? t("manualSource") : m.source === "file" ? t("fileSource") : m.source}
                   </span>
                   {m.source !== "file" && (
                     <button

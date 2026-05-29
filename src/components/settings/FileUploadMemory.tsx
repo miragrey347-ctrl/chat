@@ -20,21 +20,21 @@ export default function FileUploadMemory({ onFileAdd }: FileUploadMemoryProps) {
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "";
       if (!["txt", "md", "json"].includes(ext)) {
-        setError("不支持的文件格式，仅支持 txt/md/json");
+        setError(t("unsupportedFileOnly"));
         setReading(false);
         return;
       }
 
       const text = await file.text();
       if (!text.trim()) {
-        setError("文件内容为空");
+        setError(t("fileEmpty"));
         setReading(false);
         return;
       }
 
       onFileAdd(file.name, text.trim());
     } catch (e) {
-      setError("文件读取失败");
+      setError(t("fileReadFailed"));
       console.error(e);
     } finally {
       setReading(false);
@@ -69,7 +69,7 @@ export default function FileUploadMemory({ onFileAdd }: FileUploadMemoryProps) {
           cursor: reading ? "default" : "pointer",
         }}
       >
-        {reading ? "读取中..." : (
+        {reading ? t("reading") : (
           <>
             {t("uploadFile")}
             <div style={{ fontSize: "12px", marginTop: "4px" }}>

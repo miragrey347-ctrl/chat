@@ -30,7 +30,7 @@ export default function LoginPage() {
         setError(t("loginError"));
       }
     } catch {
-      setError("连接失败");
+      setError(t("connectionFailed"));
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="输入访问密码"
+            placeholder={t("enterAccessPassword")}
             autoFocus
             className="w-full outline-none transition-all duration-200"
             style={{
@@ -118,7 +118,7 @@ export default function LoginPage() {
               border: "none",
             }}
           >
-            {loading ? "验证中..." : t("loginButton")}
+            {loading ? t("verifying") : t("loginButton")}
           </button>
         </div>
       </form>

@@ -29,7 +29,7 @@ export interface NavContext {
 export default function SettingsPage() {
   const router = useRouter();
   const [navStack, setNavStack] = useState<NavPage[]>([
-    { id: "home", title: "设置" },
+    { id: "home", title: "Settings" },
   ]);
   const [animDir, setAnimDir] = useState<"forward" | "back" | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);

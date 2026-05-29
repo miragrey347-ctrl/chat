@@ -46,7 +46,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
   const [openaiVoice, setOpenaiVoice] = useState("alloy");
 
   return (
-    <SettingsPageLayout nav={nav} title="语音服务">
+    <SettingsPageLayout nav={nav} title={t("voiceService")}>
       <SectionLabel>{ t("defaultTts") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
@@ -94,7 +94,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
             API Key
           </label>
-          <input type="password" placeholder="输入 ElevenLabs API Key" style={inputStyle} />
+          <input type="password" placeholder={t("enterElevenLabsKey")} style={inputStyle} />
         </div>
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>

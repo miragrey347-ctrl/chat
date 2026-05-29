@@ -603,7 +603,7 @@ export default function ChatPage() {
 
     // Auto-title on first message
     if (updatedMessages.filter((m) => m.role === "user").length === 1) {
-      autoTitle(convId!, content || (fileAttachments[0]?.name || imageAttachments[0]?.name || "新对话"));
+      autoTitle(convId!, content || (fileAttachments[0]?.name || imageAttachments[0]?.name || t("newConversation")));
     }
 
     // Placeholder for assistant
@@ -879,7 +879,7 @@ export default function ChatPage() {
   // ── Export conversation ──
   const getConvTitle = () => {
     const conv = conversations.find((c) => c.id === currentConvId);
-    return conv?.title || "对话";
+    return conv?.title || t("conversation");
   };
 
   const triggerDownload = (content: string, filename: string, mimeType: string) => {
@@ -1277,7 +1277,7 @@ export default function ChatPage() {
               导出对话
             </h3>
             <p style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "16px" }}>
-              {getConvTitle()} · {messages.length} 条消息
+              {getConvTitle()} · {messages.length} {t("msgCount")}
             </p>
             {([
               { format: "md" as const, label: t("markdown"), desc: t("markdownDesc") },
@@ -1366,11 +1366,11 @@ export default function ChatPage() {
             {[
               ["⌘/Ctrl + N", t("newConversation")],
               ["⌘/Ctrl + B", t("toggleSidebar")],
-              ["⌘/Ctrl + I", "聚焦输入框"],
+              ["⌘/Ctrl + I", t("focusInput")],
               ["⌘/Ctrl + E", t("exportChat")],
               ["⌘/Ctrl + ⇧ + S", t("openSettings")],
-              ["⌘/Ctrl + /", "显示快捷键"],
-              ["Esc", "关闭弹窗 / 停止生成"],
+              ["⌘/Ctrl + /", t("showShortcuts")],
+              ["Esc", t("closePopup")],
             ].map(([key, desc]) => (
               <div
                 key={key}

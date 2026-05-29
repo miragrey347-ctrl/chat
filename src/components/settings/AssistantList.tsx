@@ -25,13 +25,13 @@ export default function AssistantList({ nav }: { nav: NavContext }) {
   };
 
   return (
-    <SettingsPageLayout nav={nav} title="助手">
+    <SettingsPageLayout nav={nav} title={t("assistants")}>
       {/* New assistant button */}
       <button
         onClick={() =>
           nav.push({
             id: "assistant-edit",
-            title: "新建助手",
+            title: t("newAssistant"),
             props: { assistantId: null },
           })
         }
@@ -75,7 +75,7 @@ export default function AssistantList({ nav }: { nav: NavContext }) {
                 onClick={() =>
                   nav.push({
                     id: "assistant-edit",
-                    title: "编辑助手",
+                    title: t("editAssistantTitle"),
                     props: { assistantId: a.id },
                   })
                 }

@@ -15,7 +15,7 @@ export default function DataBackup({ nav }: { nav: NavContext }) {
   };
 
   return (
-    <SettingsPageLayout nav={nav} title="数据备份与同步">
+    <SettingsPageLayout nav={nav} title={t("dataBackup")}>
       <SectionLabel>{ t("autoSync") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>

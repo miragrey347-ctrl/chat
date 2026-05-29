@@ -76,8 +76,8 @@ export default function SearchService({ nav }: { nav: NavContext }) {
       <SettingsCard>
         <div style={{ padding: "14px 16px", fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
           <p style={{ marginBottom: "8px" }}>{t("searchApiNote")}</p>
-          <p style={{ marginBottom: "6px" }}>• <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>SERPER_API_KEY</span>（推荐，serper.dev 免费 2500 次/月）</p>
-          <p>• <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>BRAVE_SEARCH_API_KEY</span>（api.search.brave.com 免费 2000 次/月）</p>
+          <p style={{ marginBottom: "6px" }}>• <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>SERPER_API_KEY</span>{t("serperNote")}</p>
+          <p>• <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>BRAVE_SEARCH_API_KEY</span>{t("braveNote")}</p>
         </div>
       </SettingsCard>
     </SettingsPageLayout>

@@ -171,7 +171,7 @@ function Card({ children }: { children: React.ReactNode }) {
 export default function SettingsHome({ nav }: SettingsHomeProps) {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState("深色");
+  const [currentTheme, setCurrentTheme] = useState("dark");
 
   const { locale, setLocale, t } = useLocale();
   const currentLang = locale === "en" ? "English" : "简体中文";

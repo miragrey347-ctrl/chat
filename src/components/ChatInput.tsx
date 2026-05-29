@@ -76,7 +76,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
           mimeType: file.type || "text/plain",
         });
       } else {
-        alert(`不支持的文件格式: .${ext}`);
+        alert(t("unsupportedFormat"));
       }
     }
 

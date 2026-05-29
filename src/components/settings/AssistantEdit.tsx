@@ -112,13 +112,13 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
       });
       if (!res.ok) {
         const err = await res.json();
-        alert("保存失败：" + (err.error || res.status));
+        alert(t("saveFailed"));
         return;
       }
       nav.pop();
     } catch (e) {
       console.error("Failed to save assistant:", e);
-      alert("保存失败，请重试");
+      alert(t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -253,7 +253,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
             }}
           >
             <span>{ t("characters") }：{systemPrompt.length}</span>
-            <span>Token 估算：~{estimateTokens(systemPrompt)}</span>
+            <span>{ t("tokenEstLabel") }：~{estimateTokens(systemPrompt)}</span>
           </div>
         </div>
       </SettingsCard>
@@ -343,7 +343,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
                 if (assistantId) {
                   nav.push({
                     id: "memory-manage",
-                    title: `管理记忆（${name}）`,
+                    title: `${t("manageMemoryFor")}（${name}）`,
                     props: { assistantId, assistantName: name },
                   });
                 }
