@@ -116,7 +116,7 @@ export default function Sidebar({
           }}
         >
           <span style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>
-            对话
+            {t("conversations")}
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
