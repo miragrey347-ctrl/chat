@@ -102,7 +102,6 @@ export default function ChatMessage({
   const ds = displaySettings || {
     showTimestamps: true,
     showTokenStats: true,
-    showCostEstimate: false,
     showCacheStatus: false,
     thinkingMarkdown: false,
     userMarkdown: false,
@@ -356,11 +355,6 @@ export default function ChatMessage({
           <span>
             {((message.input_tokens || 0) + (message.output_tokens || 0)).toLocaleString()} tokens
           </span>
-          {ds.showCostEstimate && message.input_tokens && message.output_tokens && (
-            <span style={{ color: "var(--accent)" }}>
-              ~${((message.input_tokens * 0.003 + message.output_tokens * 0.015) / 1000).toFixed(4)}
-            </span>
-          )}
           {ds.showCacheStatus && message.cache_status && (
             <span>{message.cache_status}</span>
           )}

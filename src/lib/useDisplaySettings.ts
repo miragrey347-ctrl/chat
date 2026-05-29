@@ -7,7 +7,6 @@ export interface DisplaySettings {
   showNames: boolean;
   showTimestamps: boolean;
   showTokenStats: boolean;
-  showCostEstimate: boolean;
   showCacheStatus: boolean;
   thinkingMarkdown: boolean;
   userMarkdown: boolean;
@@ -23,7 +22,6 @@ export const DISPLAY_DEFAULTS: DisplaySettings = {
   showNames: false,
   showTimestamps: true,
   showTokenStats: true,
-  showCostEstimate: false,
   showCacheStatus: false,
   thinkingMarkdown: false,
   userMarkdown: false,

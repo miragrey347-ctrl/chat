@@ -30,7 +30,6 @@ const DEFAULTS: Record<string, boolean> = {
   showNames: false,
   showTimestamps: true,
   showTokenStats: true,
-  showCostEstimate: false,
   showCacheStatus: false,
   thinkingMarkdown: false,
   userMarkdown: false,
@@ -84,13 +83,6 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
           label={t("showTokenStats")}
           value={settings.showTokenStats}
           onChange={() => toggle("showTokenStats")}
-        />
-        <SettingsDivider />
-        <SettingsToggleRow
-          label={t("showCostEstimate")}
-          description="依赖 Token 统计开启"
-          value={settings.showCostEstimate}
-          onChange={() => toggle("showCostEstimate")}
         />
         <SettingsDivider />
         <SettingsToggleRow
