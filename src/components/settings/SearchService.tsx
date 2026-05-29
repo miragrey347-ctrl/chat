@@ -31,11 +31,11 @@ export default function SearchService({ nav }: { nav: NavContext }) {
   };
 
   return (
-    <SettingsPageLayout nav={nav} title="搜索服务">
+    <SettingsPageLayout nav={nav} title={t("searchService")}>
       <SettingsCard>
         <SettingsToggleRow
-          label="搜索功能"
-          description="开启后聊天界面底部会出现搜索开关，发消息时可自动搜索网络获取最新信息。"
+          label={t("searchFeature")}
+          description={t("searchFeatureDesc")}
           value={enabled}
           onChange={handleToggle}
         />
@@ -65,17 +65,17 @@ export default function SearchService({ nav }: { nav: NavContext }) {
                 }}
               />
               <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "4px" }}>
-                范围 1-10，默认 5
+                {t("searchRange")}
               </p>
             </div>
           </>
         )}
       </SettingsCard>
 
-      <SectionLabel>说明</SectionLabel>
+      <SectionLabel>{ t("searchNote") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px", fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
-          <p style={{ marginBottom: "8px" }}>需要在 Vercel 环境变量中配置搜索 API Key（二选一）：</p>
+          <p style={{ marginBottom: "8px" }}>{t("searchApiNote")}</p>
           <p style={{ marginBottom: "6px" }}>• <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>SERPER_API_KEY</span>（推荐，serper.dev 免费 2500 次/月）</p>
           <p>• <span style={{ fontFamily: "monospace", color: "var(--accent)" }}>BRAVE_SEARCH_API_KEY</span>（api.search.brave.com 免费 2000 次/月）</p>
         </div>

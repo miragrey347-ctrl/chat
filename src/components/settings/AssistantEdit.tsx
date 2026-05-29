@@ -126,7 +126,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
 
   const handleDelete = async () => {
     if (!assistantId) return;
-    if (!confirm("确定要删除这个助手吗？")) return;
+    if (!confirm(t("confirmDeleteAssistant"))) return;
     try {
       await fetch("/api/assistants", {
         method: "DELETE",
@@ -148,7 +148,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
 
   if (loading) {
     return (
-      <SettingsPageLayout nav={nav} title={isNew ? "新建助手" : "编辑助手"}>
+      <SettingsPageLayout nav={nav} title={isNew ? t("newAssistant") : t("editAssistantTitle")}>
         <p style={{ textAlign: "center", color: "var(--text-tertiary)", padding: "40px 0" }}>
           加载中...
         </p>
@@ -157,9 +157,9 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
   }
 
   return (
-    <SettingsPageLayout nav={nav} title={isNew ? "新建助手" : "编辑助手"}>
+    <SettingsPageLayout nav={nav} title={isNew ? t("newAssistant") : t("editAssistantTitle")}>
       {/* ── 基础设定 ── */}
-      <SectionLabel>基础设定</SectionLabel>
+      <SectionLabel>{ t("basicSettings") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
@@ -168,7 +168,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="输入助手名称"
+            placeholder={t("assistantNameInput")}
             style={inputStyle}
           />
         </div>
@@ -180,7 +180,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
           <input
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            placeholder="如：聊天、翻译、工作"
+            placeholder={t("tagsExample")}
             style={inputStyle}
           />
         </div>
@@ -219,20 +219,20 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
         </div>
         <SettingsDivider />
         <SettingsToggleRow
-          label="流式输出"
+          label={t("streamOutput")}
           value={streamEnabled}
           onChange={setStreamEnabled}
         />
       </SettingsCard>
 
       {/* ── 系统提示词 ── */}
-      <SectionLabel>系统提示词</SectionLabel>
+      <SectionLabel>{ t("systemPromptLabel") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <textarea
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
-            placeholder="输入系统提示词..."
+            placeholder={t("systemPromptInput")}
             rows={10}
             style={{
               ...inputStyle,
@@ -252,14 +252,14 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
               marginTop: "6px",
             }}
           >
-            <span>字符数：{systemPrompt.length}</span>
+            <span>{ t("characters") }：{systemPrompt.length}</span>
             <span>Token 估算：~{estimateTokens(systemPrompt)}</span>
           </div>
         </div>
       </SettingsCard>
 
       {/* ── 快捷消息 ── */}
-      <SectionLabel>快捷消息</SectionLabel>
+      <SectionLabel>{ t("quickMessagesLabel") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           {quickMsgs.map((q, i) => (
@@ -279,7 +279,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
                   u[i] = { ...u[i], name: e.target.value };
                   setQuickMsgs(u);
                 }}
-                placeholder="按钮名"
+                placeholder={t("buttonName")}
                 style={{ ...inputStyle, width: "35%" }}
               />
               <input
@@ -289,7 +289,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
                   u[i] = { ...u[i], content: e.target.value };
                   setQuickMsgs(u);
                 }}
-                placeholder="发送内容"
+                placeholder={t("sendContent")}
                 style={{ ...inputStyle, flex: 1 }}
               />
               <button
@@ -327,11 +327,11 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
       </SettingsCard>
 
       {/* ── 助手记忆 ── */}
-      <SectionLabel>助手记忆</SectionLabel>
+      <SectionLabel>{ t("assistantMemoryLabel") }</SectionLabel>
       <SettingsCard>
         <SettingsToggleRow
-          label="启用助手记忆"
-          description="开启后，模型会在对话中自动识别并记录你的重要信息，也可以主动要求模型记住某些内容。记录的信息将在该助手的所有对话中使用。"
+          label={t("enableAssistantMemoryLabel")}
+          description={t("assistantMemoryDesc")}
           value={memoryEnabled}
           onChange={setMemoryEnabled}
         />
@@ -364,17 +364,17 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
               }}
             >
               <div>
-                <div style={{ fontSize: "15px", color: "var(--text-primary)" }}>管理记忆</div>
+                <div style={{ fontSize: "15px", color: "var(--text-primary)" }}>{ t("manageMemoryLabel") }</div>
                 <div style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "4px" }}>
-                  {assistantId ? "手动添加或上传文件添加记忆" : "保存助手后可管理记忆"}
+                  {assistantId ? t("manageMemoryAvailable") : t("manageMemorySaveFirst")}
                 </div>
               </div>
               <span style={{ fontSize: "16px", color: "var(--text-tertiary)", opacity: 0.5 }}>›</span>
             </button>
             <SettingsDivider />
             <SettingsToggleRow
-              label="参考历史聊天记录"
-              description="开启后，新建对话时自动携带该助手最近几条对话的摘要作为上下文参考。"
+              label={t("refHistory")}
+              description={t("refHistoryDesc")}
               value={historyRefEnabled}
               onChange={setHistoryRefEnabled}
             />
@@ -382,7 +382,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
               <>
                 <SettingsDivider />
                 <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "15px", color: "var(--text-primary)" }}>参考最近</span>
+                  <span style={{ fontSize: "15px", color: "var(--text-primary)" }}>{ t("refRecent") }</span>
                   <select
                     value={historyRefCount}
                     onChange={(e) => setHistoryRefCount(Number(e.target.value))}
@@ -407,7 +407,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
                       </option>
                     ))}
                   </select>
-                  <span style={{ fontSize: "15px", color: "var(--text-primary)" }}>条对话</span>
+                  <span style={{ fontSize: "15px", color: "var(--text-primary)" }}>{ t("chatsUnit") }</span>
                 </div>
               </>
             )}
@@ -448,7 +448,7 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
             opacity: saving ? 0.6 : 1,
           }}
         >
-          {saving ? "保存中..." : "保存"}
+          {saving ? t("saving") : t("save")}
         </button>
       </div>
 

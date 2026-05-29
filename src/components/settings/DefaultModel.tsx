@@ -6,6 +6,7 @@ import type { NavContext } from "@/app/settings/page";
 import SettingsPageLayout, { SettingsCard } from "./SettingsPageLayout";
 
 export default function DefaultModel({ nav }: { nav: NavContext }) {
+  const { t } = useLocale();
   const [models, setModels] = useState<{ model_id: string; display_name: string }[]>([]);
   const [selected, setSelected] = useState("");
 
@@ -31,11 +32,11 @@ export default function DefaultModel({ nav }: { nav: NavContext }) {
   };
 
   return (
-    <SettingsPageLayout nav={nav} title="默认模型">
+    <SettingsPageLayout nav={nav} title={t("defaultModel")}>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <p style={{ fontSize: "13px", color: "var(--text-tertiary)", marginBottom: "12px" }}>
-            新建对话时的默认模型。此设置为全局默认，每个助手可在助手设置中单独覆盖。
+            {t("defaultModelDesc")}
           </p>
           <select
             value={selected}

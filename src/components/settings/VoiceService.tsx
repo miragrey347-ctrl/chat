@@ -40,13 +40,14 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function VoiceService({ nav }: { nav: NavContext }) {
+  const { t } = useLocale();
   const [defaultTTS, setDefaultTTS] = useState("openai");
   const [openaiModel, setOpenaiModel] = useState("tts-1");
   const [openaiVoice, setOpenaiVoice] = useState("alloy");
 
   return (
     <SettingsPageLayout nav={nav} title="语音服务">
-      <SectionLabel>默认 TTS 服务</SectionLabel>
+      <SectionLabel>{ t("defaultTts") }</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <select value={defaultTTS} onChange={(e) => setDefaultTTS(e.target.value)} style={selectStyle}>

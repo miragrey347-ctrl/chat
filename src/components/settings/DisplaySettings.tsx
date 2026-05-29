@@ -57,8 +57,8 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
   };
 
   return (
-    <SettingsPageLayout nav={nav} title="显示设置">
-      <SectionLabel>聊天项显示</SectionLabel>
+    <SettingsPageLayout nav={nav} title={t("displaySettings")}>
+      <SectionLabel>{ t("chatDisplay") }</SectionLabel>
       <SettingsCard>
         <SettingsToggleRow
           label={t("showAvatar")}
@@ -74,7 +74,7 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
         <SettingsDivider />
         <SettingsToggleRow
           label={t("showTimestamps")}
-          description="格式：2026-05-14 18:12"
+          description={t("timestampFormat")}
           value={settings.showTimestamps}
           onChange={() => toggle("showTimestamps")}
         />
@@ -87,13 +87,13 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
         <SettingsDivider />
         <SettingsToggleRow
           label={t("showCacheStatus")}
-          description="显示缓存命中/写入及命中率"
+          description={t("cacheStatusDesc")}
           value={settings.showCacheStatus}
           onChange={() => toggle("showCacheStatus")}
         />
       </SettingsCard>
 
-      <SectionLabel>渲染设置</SectionLabel>
+      <SectionLabel>{ t("renderSettings") }</SectionLabel>
       <SettingsCard>
         <SettingsToggleRow
           label={t("thinkingMarkdown")}
@@ -115,17 +115,17 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
         <SettingsDivider />
         <SettingsToggleRow
           label={t("latexRendering")}
-          description="识别 $...$ 和 $$...$$ 公式"
+          description={t("latexDesc")}
           value={settings.latexRendering}
           onChange={() => toggle("latexRendering")}
         />
       </SettingsCard>
 
-      <SectionLabel>行为与启动</SectionLabel>
+      <SectionLabel>{ t("behaviorSettings") }</SectionLabel>
       <SettingsCard>
         <SettingsToggleRow
           label={t("autoCollapseThinking")}
-          description="开启后思维链默认折叠，点击可展开"
+          description={t("autoCollapseDesc")}
           value={settings.autoCollapseThinking}
           onChange={() => toggle("autoCollapseThinking")}
         />
@@ -138,7 +138,7 @@ export default function DisplaySettings({ nav }: { nav: NavContext }) {
         <SettingsDivider />
         <SettingsToggleRow
           label={t("enterNewline")}
-          description="开启后回车=换行，使用发送按钮发送消息。所有设备行为统一"
+          description={t("enterNewlineDesc")}
           value={settings.enterToNewline}
           onChange={() => toggle("enterToNewline")}
         />

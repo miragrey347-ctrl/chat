@@ -206,6 +206,65 @@ const translations: Record<string, Record<Locale, string>> = {
 
   // ── Error ──
   "error": { zh: "错误", en: "Error" },
+
+  // ── Display Settings (sections/descriptions) ──
+  "chatDisplay": { zh: "聊天项显示", en: "Chat Display" },
+  "renderSettings": { zh: "渲染设置", en: "Rendering" },
+  "behaviorSettings": { zh: "行为与启动", en: "Behavior" },
+  "timestampFormat": { zh: "格式：2026-05-14 18:12", en: "Format: 2026-05-14 18:12" },
+  "cacheStatusDesc": { zh: "显示缓存命中/写入及命中率", en: "Show cache hit/write and hit rate" },
+  "latexDesc": { zh: "识别 $...$ 和 $$...$$ 公式", en: "Recognize $...$ and $$...$$ formulas" },
+  "autoCollapseDesc": { zh: "开启后思维链默认折叠，点击可展开", en: "Collapsed by default, click to expand" },
+  "enterNewlineDesc": { zh: "开启后回车=换行，使用发送按钮发送消息", en: "Enter = newline, use send button to send" },
+
+  // ── Assistant Edit ──
+  "basicSettings": { zh: "基础设定", en: "Basic Settings" },
+  "assistantNameInput": { zh: "输入助手名称", en: "Enter assistant name" },
+  "tagsOptional": { zh: "标签（可选）", en: "Tags (optional)" },
+  "tagsExample": { zh: "如：聊天、翻译、工作", en: "e.g. chat, translate, work" },
+  "defaultModelId": { zh: "默认模型 ID", en: "Default Model ID" },
+  "streamOutput": { zh: "流式输出", en: "Stream Output" },
+  "systemPromptLabel": { zh: "系统提示词", en: "System Prompt" },
+  "systemPromptInput": { zh: "输入系统提示词...", en: "Enter system prompt..." },
+  "quickMessagesLabel": { zh: "快捷消息", en: "Quick Messages" },
+  "addQuickMsg": { zh: "+ 添加快捷消息", en: "+ Add Quick Message" },
+  "buttonName": { zh: "按钮名", en: "Button name" },
+  "sendContent": { zh: "发送内容", en: "Send content" },
+  "assistantMemoryLabel": { zh: "助手记忆", en: "Assistant Memory" },
+  "enableAssistantMemoryLabel": { zh: "启用助手记忆", en: "Enable Memory" },
+  "manageMemoryLabel": { zh: "管理记忆", en: "Manage Memory" },
+  "manageMemoryAvailable": { zh: "手动添加或上传文件添加记忆", en: "Add manually or upload files" },
+  "manageMemorySaveFirst": { zh: "保存助手后可管理记忆", en: "Save assistant first" },
+  "refHistory": { zh: "参考历史聊天记录", en: "Reference Chat History" },
+  "refHistoryDesc": { zh: "开启后，新建对话时自动携带该助手最近几条对话的摘要作为上下文参考。", en: "Auto-include recent chat summaries as context for new conversations." },
+  "refRecent": { zh: "参考最近", en: "Recent" },
+  "chatsUnit": { zh: "条对话", en: "chats" },
+  "saving": { zh: "保存中...", en: "Saving..." },
+  "loading": { zh: "加载中...", en: "Loading..." },
+  "saveFailed": { zh: "保存失败，请重试", en: "Save failed" },
+  "confirmDeleteAssistant": { zh: "确定要删除这个助手吗？", en: "Delete this assistant?" },
+  "editAssistantTitle": { zh: "编辑助手", en: "Edit Assistant" },
+
+  // ── Default Model ──
+  "defaultModelDesc": { zh: "新建对话时的默认模型。此设置为全局默认，每个助手可在助手设置中单独覆盖。", en: "Default model for new conversations. Each assistant can override in its own settings." },
+
+  // ── Search Service ──
+  "searchFeature": { zh: "搜索功能", en: "Search Feature" },
+  "searchFeatureDesc": { zh: "开启后聊天界面底部会出现搜索开关，发消息时可自动搜索网络获取最新信息。", en: "When enabled, a search toggle appears in chat for web search." },
+  "maxSearchResults": { zh: "最大搜索结果数", en: "Max Search Results" },
+  "searchRange": { zh: "范围 1-10，默认 5", en: "Range 1-10, default 5" },
+  "searchNote": { zh: "说明", en: "Note" },
+  "searchApiNote": { zh: "需要在 Vercel 环境变量中配置搜索 API Key（二选一）：", en: "Configure a search API key in Vercel env vars (pick one):" },
+
+  // ── Voice Service ──
+  "defaultTts": { zh: "默认 TTS 服务", en: "Default TTS Service" },
+  "modelLabel": { zh: "模型", en: "Model" },
+  "voiceLabel": { zh: "声音", en: "Voice" },
+
+  // ── ChatMessage (cache/token stats) ──
+  "cacheWriteLabel": { zh: "缓存写入", en: "Cache write" },
+  "cacheHitLabel": { zh: "缓存命中", en: "Cache hit" },
+  "hitRateLabel": { zh: "命中率", en: "Hit rate" },
 };
 
 // Get locale from localStorage

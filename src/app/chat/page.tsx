@@ -296,9 +296,9 @@ export default function ChatPage() {
     let cacheStatus = "";
     if (cachedTokens > 0) {
       const hitRate = totalInputTokens > 0 ? ((cachedTokens / totalInputTokens) * 100).toFixed(1) : "0";
-      cacheStatus = `缓存命中：${cachedTokens} tokens（命中率 ${hitRate}%）`;
+      cacheStatus = `${t("cacheHitLabel")}：${cachedTokens} tokens（${t("hitRateLabel")} ${hitRate}%）`;
     } else if (cacheWriteTokens > 0) {
-      cacheStatus = `缓存写入：${cacheWriteTokens} tokens`;
+      cacheStatus = `${t("cacheWriteLabel")}：${cacheWriteTokens} tokens`;
     }
 
     return { cacheStatus, cachedTokens };
