@@ -22,6 +22,24 @@ function CodeBlock({ children, className }: { children: string; className?: stri
     setTimeout(() => setCopied(false), 2000);
   }, [code]);
 
+  const handleDownload = useCallback(() => {
+    const ext = language || "html";
+    const mimeMap: Record<string, string> = {
+      html: "text/html", htm: "text/html", svg: "image/svg+xml",
+      js: "text/javascript", ts: "text/typescript", css: "text/css",
+      json: "application/json", py: "text/x-python", md: "text/markdown",
+      txt: "text/plain", csv: "text/csv", xml: "text/xml",
+    };
+    const mime = mimeMap[ext] || "text/plain";
+    const blob = new Blob([code], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `artifact.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [code, language]);
+
   // Determine if this code block can be rendered as a preview
   const isRenderable = ["html", "svg", "htm"].includes(language.toLowerCase()) ||
     (!language && code.startsWith("<") && (code.includes("<div") || code.includes("<svg") || code.includes("<!DOCTYPE")));
@@ -66,6 +84,16 @@ function CodeBlock({ children, className }: { children: string; className?: stri
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
               Code
+            </button>
+            <button
+              onClick={handleDownload}
+              style={{
+                background: "none", border: "none", color: "var(--text-tertiary)",
+                cursor: "pointer", padding: "4px 8px", fontSize: "12px",
+                display: "flex", alignItems: "center", gap: "4px",
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </button>
             <button
               onClick={handleCopy}
