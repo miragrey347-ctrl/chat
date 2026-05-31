@@ -544,26 +544,18 @@ export default function ChatPage() {
   const handleSend = async (content: string, attachments?: Attachment[]) => {
     // Auto-create conversation if none selected
     let convId = currentConvId;
+    let convPromise: Promise<string | null> | null = null;
     if (!convId) {
-      try {
-        const assistantId = pendingAssistantId || assistants[0]?.id || null;
-        const res = await fetch("/api/conversations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assistant_id: assistantId,
-            current_model: model,
-          }),
-        });
-        const conv = await res.json();
+      const assistantId = pendingAssistantId || assistants[0]?.id || null;
+      convPromise = fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assistant_id: assistantId, current_model: model }),
+      }).then((r) => r.json()).then((conv) => {
         convId = conv.id;
         setCurrentConvId(conv.id);
-        // Don't fetchConversations here - it causes re-render during streaming
-        // Will fetch after streaming completes
-      } catch (e) {
-        console.error("Failed to create conversation:", e);
-        return;
-      }
+        return conv.id as string;
+      }).catch(() => null);
     }
 
     // Build user display content (includes file text, image placeholders)
@@ -602,10 +594,10 @@ export default function ChatPage() {
       displayContent = displayContent ? `${displayContent}\n${imgText}` : imgText;
     }
 
-    // User message
+    // User message (use temp convId for display, real one for DB later)
     const userMsg: Message = {
       id: generateId(),
-      conversation_id: convId!,
+      conversation_id: convId || "pending",
       role: "user",
       content: displayContent,
       created_at: new Date().toISOString(),
@@ -620,7 +612,17 @@ export default function ChatPage() {
     setMessages(updatedMessages);
     setIsStreaming(true);
 
-    // Save user message
+    // Flush render so user sees their message immediately
+    await new Promise((r) => requestAnimationFrame(r));
+
+    // Wait for conversation creation if it was started
+    if (convPromise) {
+      const newId = await convPromise;
+      if (!newId) { setIsStreaming(false); return; }
+      convId = newId;
+    }
+
+    // Save user message (non-blocking)
     saveMessage({ conversation_id: convId!, role: "user", content: displayContent });
 
     // Auto-title on first message
