@@ -44,6 +44,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
   const [defaultTTS, setDefaultTTS] = useState("openai");
   const [openaiModel, setOpenaiModel] = useState("tts-1");
   const [openaiVoice, setOpenaiVoice] = useState("alloy");
+  const [elevenVoice, setElevenVoice] = useState("Rachel");
 
   return (
     <SettingsPageLayout nav={nav} title={t("voiceService")}>
@@ -70,21 +71,24 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
             {t("modelLabel")}
           </label>
-          <select value={openaiModel} onChange={(e) => setOpenaiModel(e.target.value)} style={selectStyle}>
-            <option value="tts-1">tts-1</option>
-            <option value="tts-1-hd">tts-1-hd</option>
-          </select>
+          <input
+            value={openaiModel}
+            onChange={(e) => setOpenaiModel(e.target.value)}
+            placeholder="tts-1, tts-1-hd"
+            style={inputStyle}
+          />
         </div>
         <SettingsDivider />
         <div style={{ padding: "14px 16px" }}>
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
             {t("voiceLabel")}
           </label>
-          <select value={openaiVoice} onChange={(e) => setOpenaiVoice(e.target.value)} style={selectStyle}>
-            {["alloy", "echo", "fable", "onyx", "nova", "shimmer"].map((v) => (
-              <option key={v} value={v}>{v}</option>
-            ))}
-          </select>
+          <input
+            value={openaiVoice}
+            onChange={(e) => setOpenaiVoice(e.target.value)}
+            placeholder="alloy, echo, fable, onyx, nova, shimmer"
+            style={inputStyle}
+          />
         </div>
       </SettingsCard>
 
@@ -101,9 +105,12 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
           <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
             {t("voiceLabel")}
           </label>
-          <select style={selectStyle}>
-            <option value="rachel">Rachel</option>
-          </select>
+          <input
+            value={elevenVoice}
+            onChange={(e) => setElevenVoice(e.target.value)}
+            placeholder="Rachel, Adam, Bella..."
+            style={inputStyle}
+          />
           <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "4px" }}>
             {t("pullVoiceList")}
           </p>
