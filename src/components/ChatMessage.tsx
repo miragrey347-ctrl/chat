@@ -11,30 +11,127 @@ import type { DisplaySettings } from "@/lib/useDisplaySettings";
 
 function CodeBlock({ children, className }: { children: string; className?: string }) {
   const [copied, setCopied] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const { t } = useLocale();
   const language = className?.replace("language-", "") || "";
+  const code = children.trim();
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(children.trim());
+    navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [children]);
+  }, [code]);
+
+  // Determine if this code block can be rendered as a preview
+  const isRenderable = ["html", "svg", "htm"].includes(language.toLowerCase()) ||
+    (!language && code.startsWith("<") && (code.includes("<div") || code.includes("<svg") || code.includes("<!DOCTYPE")));
+
+  if (isRenderable && showPreview) {
+    // Build full HTML document for iframe
+    const iframeContent = code.startsWith("<svg")
+      ? `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100%;background:transparent;}</style></head><body>${code}</body></html>`
+      : code.includes("<html") || code.includes("<!DOCTYPE")
+        ? code
+        : `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:16px;font-family:-apple-system,system-ui,sans-serif;color:#333;}</style></head><body>${code}</body></html>`;
+
+    return (
+      <div style={{
+        borderRadius: "12px",
+        overflow: "hidden",
+        border: "0.5px solid var(--border-color)",
+        margin: "8px 0",
+      }}>
+        {/* Toolbar */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "6px 12px",
+          background: "var(--bg-tertiary)",
+          fontSize: "12px",
+          color: "var(--text-tertiary)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+            <span>{language || "html"}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <button
+              onClick={() => setShowPreview(false)}
+              style={{
+                background: "none", border: "none", color: "var(--text-tertiary)",
+                cursor: "pointer", padding: "4px 8px", fontSize: "12px",
+                display: "flex", alignItems: "center", gap: "4px",
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              Code
+            </button>
+            <button
+              onClick={handleCopy}
+              style={{
+                background: "none", border: "none", color: "var(--text-tertiary)",
+                cursor: "pointer", padding: "4px 8px", fontSize: "12px",
+              }}
+            >
+              {copied ? "✓" : "Copy"}
+            </button>
+          </div>
+        </div>
+        {/* Preview iframe */}
+        <iframe
+          srcDoc={iframeContent}
+          sandbox="allow-scripts"
+          style={{
+            width: "100%",
+            minHeight: "200px",
+            border: "none",
+            background: "#fff",
+            display: "block",
+          }}
+          onLoad={(e) => {
+            // Auto-resize iframe to content height
+            const iframe = e.target as HTMLIFrameElement;
+            try {
+              const h = iframe.contentDocument?.body?.scrollHeight;
+              if (h) iframe.style.height = Math.min(Math.max(h + 20, 200), 600) + "px";
+            } catch { /* cross-origin */ }
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="code-block-wrapper">
-      {language && (
+      {(language || isRenderable) && (
         <div
           className="px-3 py-1.5 text-xs flex justify-between items-center rounded-t-lg"
           style={{ background: "var(--bg-tertiary)", color: "var(--text-tertiary)" }}
         >
-          <span>{language}</span>
+          <span>{language || "html"}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            {isRenderable && (
+              <button
+                onClick={() => setShowPreview(true)}
+                style={{
+                  background: "none", border: "none", color: "var(--accent)",
+                  cursor: "pointer", padding: "2px 6px", fontSize: "12px",
+                  display: "flex", alignItems: "center", gap: "4px",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Preview
+              </button>
+            )}
+          </div>
         </div>
       )}
       <button onClick={handleCopy} className="code-copy-btn">
         {copied ? t("copied") : t("copy")}
       </button>
       <pre className={language ? "!rounded-t-none !mt-0" : ""}>
-        <code className={className}>{children}</code>
+        <code className={className}>{code}</code>
       </pre>
     </div>
   );
