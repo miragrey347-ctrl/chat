@@ -1,7 +1,7 @@
 "use client";
 import { useLocale } from "@/lib/i18n";
 
-import { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -196,6 +196,21 @@ export default function ChatMessage({
   const isUser = message.role === "user";
   const [showActions, setShowActions] = useState(false);
   const { t } = useLocale();
+
+  // Parse embedded tool_calls from content (persisted as HTML comment)
+  const toolCallsFromContent = useMemo(() => {
+    const match = message.content.match(/<!-- TOOL_CALLS:([A-Za-z0-9+/=]+) -->/);
+    if (!match) return null;
+    try {
+      return JSON.parse(decodeURIComponent(escape(atob(match[1])))) as Array<{ name: string; arguments: string }>;
+    } catch { return null; }
+  }, [message.content]);
+
+  // Use tool_calls from props (streaming) or from persisted content (after refresh)
+  const effectiveToolCalls = message.tool_calls || toolCallsFromContent;
+
+  // Strip tool_calls marker from displayed content
+  const displayContent = message.content.replace(/\n*<!-- TOOL_CALLS:[A-Za-z0-9+/=]+ -->/, "").trim();
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [copied, setCopied] = useState(false);
@@ -396,7 +411,7 @@ export default function ChatMessage({
             const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
             const contentUrls: string[] = [];
             let match;
-            while ((match = imgRegex.exec(message.content)) !== null) {
+            while ((match = imgRegex.exec(displayContent)) !== null) {
               contentUrls.push(match[2]);
             }
             const images = contentUrls.length > 0 ? contentUrls : (imageData || []);
@@ -474,17 +489,17 @@ export default function ChatMessage({
               </div>
             </div>
           ) : (
-            renderContent(message.content.replace(/!\[[^\]]*\]\([^)]+\)/g, "").replace(/\[图片: [^\]]+\]/g, "").trim())
+            renderContent(displayContent.replace(/!\[[^\]]*\]\([^)]+\)/g, "").replace(/\[图片: [^\]]+\]/g, "").trim())
           )}
         </div>
       </div>
 
       {/* Interactive choice buttons */}
-      {!isStreaming && message.tool_calls && message.tool_calls.length > 0 && (() => {
+      {!isStreaming && effectiveToolCalls && effectiveToolCalls.length > 0 && (() => {
         const elements: React.ReactNode[] = [];
 
         // Choice buttons
-        const choiceCall = message.tool_calls.find((tc) => tc.name === "present_choices");
+        const choiceCall = effectiveToolCalls.find((tc) => tc.name === "present_choices");
         if (choiceCall) {
           try {
             const { options } = JSON.parse(choiceCall.arguments) as { question?: string; options: Array<{ label: string; value: string }> };
@@ -520,7 +535,7 @@ export default function ChatMessage({
         }
 
         // Visual card - seamless inline rendering
-        const visualCall = message.tool_calls.find((tc) => tc.name === "render_visual");
+        const visualCall = effectiveToolCalls.find((tc) => tc.name === "render_visual");
         if (visualCall) {
           try {
             const { html, height } = JSON.parse(visualCall.arguments) as { title?: string; html: string; height?: number };

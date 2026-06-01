@@ -521,15 +521,22 @@ export default function ChatPage() {
   };
 
   // Finalize assistant message: extract stats, save to DB, update UI
-  const finalizeAssistantMessage = (convId: string, fullContent: string, thinkingContent: string, usageData: Record<string, unknown>) => {
+  const finalizeAssistantMessage = (convId: string, fullContent: string, thinkingContent: string, usageData: Record<string, unknown>, toolCalls?: Array<{ name: string; arguments: string }>) => {
     const { cacheStatus, cachedTokens } = extractCacheInfo(usageData);
     const inputTokens = (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null;
     const outputTokens = (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null;
 
+    // Embed tool_calls in content for persistence (parsed back out during render)
+    let savedContent = fullContent;
+    if (toolCalls && toolCalls.length > 0) {
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(toolCalls))));
+      savedContent = fullContent + `\n\n<!-- TOOL_CALLS:${encoded} -->`;
+    }
+
     saveMessage({
       conversation_id: convId,
       role: "assistant",
-      content: fullContent,
+      content: savedContent,
       thinking_content: thinkingContent || undefined,
       model_used: model,
       input_tokens: inputTokens,
@@ -807,8 +814,8 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader");
 
-      const { fullContent, thinkingContent, usageData } = await processStream(reader);
-      finalizeAssistantMessage(convId!, fullContent, thinkingContent, usageData);
+      const { fullContent, thinkingContent, usageData, toolCalls } = await processStream(reader);
+      finalizeAssistantMessage(convId!, fullContent, thinkingContent, usageData, toolCalls);
     } catch (error: unknown) {
       handleStreamError(error);
     } finally {
@@ -877,8 +884,8 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader");
 
-      const { fullContent, thinkingContent, usageData } = await processStream(reader);
-      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData);
+      const { fullContent, thinkingContent, usageData, toolCalls } = await processStream(reader);
+      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData, toolCalls);
     } catch (error: unknown) {
       handleStreamError(error);
     } finally {
@@ -941,8 +948,8 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader");
 
-      const { fullContent, thinkingContent, usageData } = await processStream(reader);
-      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData);
+      const { fullContent, thinkingContent, usageData, toolCalls } = await processStream(reader);
+      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData, toolCalls);
     } catch (error: unknown) {
       handleStreamError(error);
     } finally {
@@ -1527,7 +1534,7 @@ export default function ChatPage() {
 
       {/* Messages */}
       <main style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
-        <div style={{ maxWidth: "768px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "960px", margin: "0 auto" }}>
           {messages.length === 0 && (
             <div style={{
               display: "flex",
@@ -1565,7 +1572,7 @@ export default function ChatPage() {
 
       {/* Input */}
       <footer style={{ flexShrink: 0, padding: "8px 16px 12px" }}>
-        <div style={{ maxWidth: "768px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "960px", margin: "0 auto" }}>
           {/* Quick messages */}
           {(() => {
             const assistant = getCurrentAssistant();
