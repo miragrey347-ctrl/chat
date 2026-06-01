@@ -600,7 +600,7 @@ export default function ChatPage() {
       type: "function",
       function: {
         name: "render_visual",
-        description: "Render an interactive HTML/SVG visual card inline in the chat. Use for comparisons, color swatches, data visualizations, diagrams, interactive demos, styled cards, or any content that benefits from visual presentation. The HTML will be rendered in a sandboxed iframe. Include all CSS inline. You can use JavaScript for interactivity.",
+        description: "Render an interactive HTML/SVG visual inline in the chat message. Use for comparisons, color swatches, data visualizations, diagrams, styled cards, or any visual content. The HTML renders seamlessly in the message flow without borders. IMPORTANT: Use transparent background (no white bg), use inherit-friendly fonts (-apple-system, system-ui). All CSS must be inline.",
         parameters: {
           type: "object",
           properties: {
