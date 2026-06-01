@@ -596,6 +596,22 @@ export default function ChatPage() {
         },
       },
     },
+    {
+      type: "function",
+      function: {
+        name: "render_visual",
+        description: "Render an interactive HTML/SVG visual card inline in the chat. Use for comparisons, color swatches, data visualizations, diagrams, interactive demos, styled cards, or any content that benefits from visual presentation. The HTML will be rendered in a sandboxed iframe. Include all CSS inline. You can use JavaScript for interactivity.",
+        parameters: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Short title for the visual" },
+            html: { type: "string", description: "Complete HTML content to render. Include inline styles. Use modern CSS (flexbox/grid). For dark mode compatibility, use these CSS vars: background use transparent, text use #333 for light." },
+            height: { type: "number", description: "Suggested height in pixels (default 300)" },
+          },
+          required: ["title", "html"],
+        },
+      },
+    },
   ];
 
   // Send message

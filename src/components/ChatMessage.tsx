@@ -481,38 +481,78 @@ export default function ChatMessage({
 
       {/* Interactive choice buttons */}
       {!isStreaming && message.tool_calls && message.tool_calls.length > 0 && (() => {
+        const elements: React.ReactNode[] = [];
+
+        // Choice buttons
         const choiceCall = message.tool_calls.find((tc) => tc.name === "present_choices");
-        if (!choiceCall) return null;
-        try {
-          const { options } = JSON.parse(choiceCall.arguments) as { question?: string; options: Array<{ label: string; value: string }> };
-          if (!options || options.length === 0) return null;
-          return (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "10px" }}>
-              {options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => onChoiceSelect?.(opt.value)}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "20px",
-                    border: "1.5px solid var(--accent)",
-                    background: "transparent",
-                    color: "var(--accent)",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    touchAction: "manipulation",
+        if (choiceCall) {
+          try {
+            const { options } = JSON.parse(choiceCall.arguments) as { question?: string; options: Array<{ label: string; value: string }> };
+            if (options && options.length > 0) {
+              elements.push(
+                <div key="choices" style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "10px" }}>
+                  {options.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => onChoiceSelect?.(opt.value)}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "20px",
+                        border: "1.5px solid var(--accent)",
+                        background: "transparent",
+                        color: "var(--accent)",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                        touchAction: "manipulation",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "#fff"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--accent)"; }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            }
+          } catch { /* skip */ }
+        }
+
+        // Visual card
+        const visualCall = message.tool_calls.find((tc) => tc.name === "render_visual");
+        if (visualCall) {
+          try {
+            const { title, html, height } = JSON.parse(visualCall.arguments) as { title?: string; html: string; height?: number };
+            const iframeDoc = html.includes("<html") || html.includes("<!DOCTYPE")
+              ? html
+              : `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,system-ui,sans-serif;padding:16px;background:transparent;}</style></head><body>${html}</body></html>`;
+            elements.push(
+              <div key="visual" style={{ marginTop: "10px", borderRadius: "12px", overflow: "hidden", border: "0.5px solid var(--border-color)" }}>
+                {title && (
+                  <div style={{ padding: "8px 12px", fontSize: "12px", color: "var(--text-tertiary)", background: "var(--bg-tertiary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                    {title}
+                  </div>
+                )}
+                <iframe
+                  srcDoc={iframeDoc}
+                  sandbox="allow-scripts"
+                  style={{ width: "100%", height: (height || 300) + "px", border: "none", display: "block", background: "#fff" }}
+                  onLoad={(e) => {
+                    const iframe = e.target as HTMLIFrameElement;
+                    try {
+                      const h = iframe.contentDocument?.body?.scrollHeight;
+                      if (h && !height) iframe.style.height = Math.min(Math.max(h + 20, 150), 600) + "px";
+                    } catch { /* cross-origin */ }
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "#fff"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--accent)"; }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          );
-        } catch { return null; }
+                />
+              </div>
+            );
+          } catch { /* skip */ }
+        }
+
+        return elements.length > 0 ? <>{elements}</> : null;
       })()}
 
       {/* Token stats */}
