@@ -607,7 +607,7 @@ export default function ChatPage() {
       type: "function",
       function: {
         name: "render_visual",
-        description: "Render an interactive HTML/SVG visual inline in the chat message. Use for comparisons, color swatches, data visualizations, diagrams, styled cards, or any visual content. The HTML renders seamlessly in the message flow without borders. IMPORTANT: Use transparent background (no white bg), use inherit-friendly fonts (-apple-system, system-ui). All CSS must be inline.",
+        description: "Render an interactive HTML/SVG visual inline in the chat. Use for comparisons, color swatches, data visualizations, diagrams, styled cards. CRITICAL LAYOUT RULES: 1) Design for 350px max width (mobile phone). 2) Use single column layout or CSS grid with auto-fit minmax(140px,1fr). 3) No fixed widths wider than 320px. 4) Use transparent background. 5) All CSS must be inline. 6) Use -apple-system,system-ui font.",
         parameters: {
           type: "object",
           properties: {

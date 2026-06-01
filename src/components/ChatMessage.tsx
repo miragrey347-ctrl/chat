@@ -541,13 +541,13 @@ export default function ChatMessage({
             const { html, height } = JSON.parse(visualCall.arguments) as { title?: string; html: string; height?: number };
             const iframeDoc = html.includes("<html") || html.includes("<!DOCTYPE")
               ? html
-              : `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,system-ui,sans-serif;background:transparent;}</style></head><body>${html}</body></html>`;
+              : `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,system-ui,sans-serif;background:transparent;max-width:100%;overflow-x:hidden;}img,svg,canvas{max-width:100%;height:auto;}div{max-width:100%;}</style></head><body>${html}</body></html>`;
             elements.push(
               <iframe
                 key="visual"
                 srcDoc={iframeDoc}
                 sandbox="allow-scripts"
-                style={{ width: "100%", height: (height || 300) + "px", border: "none", display: "block", background: "transparent", marginTop: "8px" }}
+                style={{ width: "100%", height: (height || 300) + "px", border: "none", display: "block", background: "transparent", marginTop: "8px", overflow: "hidden" }}
                 onLoad={(e) => {
                   const iframe = e.target as HTMLIFrameElement;
                   try {
