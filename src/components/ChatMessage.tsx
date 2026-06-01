@@ -335,7 +335,7 @@ export default function ChatMessage({
       <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start" }}>
         <div
           style={{
-            maxWidth: isUser ? "80%" : "85%",
+            maxWidth: isUser ? "80%" : (message.tool_calls?.some((tc) => tc.name === "render_visual") ? "100%" : "85%"),
             borderRadius: isUser ? "20px" : undefined,
             padding: isUser ? "12px 16px" : undefined,
             background: isUser ? "var(--bg-message-user)" : undefined,
