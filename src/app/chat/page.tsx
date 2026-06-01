@@ -436,6 +436,8 @@ export default function ChatPage() {
     let thinkingContent = "";
     let inThinking = false;
     let usageData: Record<string, unknown> = {};
+    // Tool calls accumulator
+    const toolCallsMap: Record<number, { name: string; arguments: string }> = {};
 
     while (true) {
       const { done, value } = await reader.read();
@@ -456,6 +458,18 @@ export default function ChatPage() {
             usageData = { ...usageData, ...parsed.usage };
           }
           const delta = parsed.choices?.[0]?.delta;
+
+          // Tool calls (streamed incrementally)
+          if (delta?.tool_calls) {
+            for (const tc of delta.tool_calls) {
+              const idx = tc.index ?? 0;
+              if (!toolCallsMap[idx]) {
+                toolCallsMap[idx] = { name: "", arguments: "" };
+              }
+              if (tc.function?.name) toolCallsMap[idx].name = tc.function.name;
+              if (tc.function?.arguments) toolCallsMap[idx].arguments += tc.function.arguments;
+            }
+          }
 
           // Extended thinking
           if (delta?.reasoning || delta?.reasoning_content) {
@@ -489,7 +503,21 @@ export default function ChatPage() {
       }
     }
 
-    return { fullContent, thinkingContent, usageData };
+    const toolCalls = Object.values(toolCallsMap).filter((tc) => tc.name);
+
+    // If there are tool calls, update the message with them
+    if (toolCalls.length > 0) {
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last.role === "assistant") {
+          updated[updated.length - 1] = { ...last, tool_calls: toolCalls };
+        }
+        return updated;
+      });
+    }
+
+    return { fullContent, thinkingContent, usageData, toolCalls };
   };
 
   // Finalize assistant message: extract stats, save to DB, update UI
@@ -539,6 +567,36 @@ export default function ChatPage() {
       return updated;
     });
   };
+
+  // ── Interactive tools definition ──
+  const interactiveTools = [
+    {
+      type: "function",
+      function: {
+        name: "present_choices",
+        description: "Present interactive choice buttons to the user. Use when offering 2-6 options, asking preferences, or when tapping a button is easier than typing. Always include text context before calling this tool.",
+        parameters: {
+          type: "object",
+          properties: {
+            question: { type: "string", description: "Brief context or question for the choices" },
+            options: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  label: { type: "string", description: "Short button label" },
+                  value: { type: "string", description: "Value sent when selected" },
+                },
+                required: ["label", "value"],
+              },
+              description: "2-6 options",
+            },
+          },
+          required: ["question", "options"],
+        },
+      },
+    },
+  ];
 
   // Send message
   const handleSend = async (content: string, attachments?: Attachment[]) => {
@@ -721,7 +779,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined, tools: interactiveTools }),
         signal: abortRef.current.signal,
       });
 
@@ -795,7 +853,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined, tools: interactiveTools }),
         signal: abortRef.current.signal,
       });
 
@@ -858,7 +916,7 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined }),
+        body: JSON.stringify({ messages: apiMessages, model, stream: true, caching: true, thinking: thinkingMode ? { enabled: true, budget: thinkingBudget } : undefined, tools: interactiveTools }),
         signal: abortRef.current.signal,
       });
 
@@ -1482,6 +1540,7 @@ export default function ChatPage() {
               onEdit={msg.role === "user" ? (newContent) => handleEditResend(i, newContent) : undefined}
               onRegenerate={msg.role === "assistant" ? () => handleRegenerate(i) : undefined}
               onDelete={() => handleDeleteMessage(msg.id, i)}
+              onChoiceSelect={msg.role === "assistant" ? (value) => handleSend(value) : undefined}
             />
           ))}
           <div ref={messagesEndRef} style={{ height: "16px" }} />

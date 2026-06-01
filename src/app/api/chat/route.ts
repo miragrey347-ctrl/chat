@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { messages, model, stream, caching, thinking } = body;
+    const { messages, model, stream, caching, thinking, tools } = body;
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
@@ -88,6 +88,11 @@ export async function POST(request: Request) {
     // Include usage stats in streaming
     if (stream) {
       openRouterBody.stream_options = { include_usage: true };
+    }
+
+    // Add tools if provided
+    if (tools && tools.length > 0) {
+      openRouterBody.tools = tools;
     }
 
     const headers: Record<string, string> = {

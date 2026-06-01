@@ -9,6 +9,7 @@ export interface Message {
   output_tokens?: number | null;
   cache_status?: string | null;
   cached_tokens?: number | null;
+  tool_calls?: Array<{ name: string; arguments: string }> | null;
   created_at: string;
 }
 

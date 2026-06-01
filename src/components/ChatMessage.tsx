@@ -180,6 +180,7 @@ interface ChatMessageProps {
   onEdit?: (content: string) => void;
   onRegenerate?: () => void;
   onDelete?: () => void;
+  onChoiceSelect?: (value: string) => void;
 }
 
 export default function ChatMessage({
@@ -190,6 +191,7 @@ export default function ChatMessage({
   onEdit,
   onRegenerate,
   onDelete,
+  onChoiceSelect,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [showActions, setShowActions] = useState(false);
@@ -476,6 +478,42 @@ export default function ChatMessage({
           )}
         </div>
       </div>
+
+      {/* Interactive choice buttons */}
+      {!isStreaming && message.tool_calls && message.tool_calls.length > 0 && (() => {
+        const choiceCall = message.tool_calls.find((tc) => tc.name === "present_choices");
+        if (!choiceCall) return null;
+        try {
+          const { options } = JSON.parse(choiceCall.arguments) as { question?: string; options: Array<{ label: string; value: string }> };
+          if (!options || options.length === 0) return null;
+          return (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "10px" }}>
+              {options.map((opt, i) => (
+                <button
+                  key={i}
+                  onClick={() => onChoiceSelect?.(opt.value)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "20px",
+                    border: "1.5px solid var(--accent)",
+                    background: "transparent",
+                    color: "var(--accent)",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    touchAction: "manipulation",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--accent)"; }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          );
+        } catch { return null; }
+      })()}
 
       {/* Token stats */}
       {ds.showTokenStats && !isUser && !isStreaming && (message.input_tokens || message.output_tokens) && (
