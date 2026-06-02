@@ -219,6 +219,7 @@ const translations: Record<string, Record<Locale, string>> = {
 
   // ── Assistant Edit ──
   "basicSettings": { zh: "基础设定", en: "Basic Settings" },
+  "assistantNameLabel": { zh: "助手名称", en: "Assistant Name" },
   "assistantNameInput": { zh: "输入助手名称", en: "Enter assistant name" },
   "tagsOptional": { zh: "标签（可选）", en: "Tags (optional)" },
   "tagsExample": { zh: "如：聊天、翻译、工作", en: "e.g. chat, translate, work" },
