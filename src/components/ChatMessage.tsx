@@ -174,7 +174,7 @@ function formatTime(dateStr: string) {
 // Auto-sizing iframe for render_visual
 function VisualIframe({ srcDoc, msgId, fixedHeight }: { srcDoc: string; msgId: string; fixedHeight?: number }) {
   const ref = React.useRef<HTMLIFrameElement>(null);
-  const [height, setHeight] = useState(fixedHeight || 200);
+  const [height, setHeight] = useState(fixedHeight || 100);
 
   useEffect(() => {
     if (fixedHeight) return;
@@ -629,9 +629,14 @@ export default function ChatMessage({
             const { html, height } = JSON.parse(visualCall.arguments) as { title?: string; html: string; height?: number };
             // Inject auto-height reporting script
             const heightScript = `<script>
-function reportHeight(){var h=document.body.scrollHeight;window.parent.postMessage({type:'iframe-height',height:h,id:'${message.id}'},'*');}
+function reportHeight(){
+  var els=document.body.children;var maxH=0;
+  for(var i=0;i<els.length;i++){var r=els[i].getBoundingClientRect();var b=r.top+r.height;if(b>maxH)maxH=b;}
+  if(maxH<10)maxH=document.body.scrollHeight;
+  window.parent.postMessage({type:'iframe-height',height:Math.ceil(maxH),id:'${message.id}'},'*');
+}
 new ResizeObserver(reportHeight).observe(document.body);
-reportHeight();
+setTimeout(reportHeight,100);setTimeout(reportHeight,500);
 </script>`;
             const iframeDoc = html.includes("<html") || html.includes("<!DOCTYPE")
               ? html.replace("</body>", heightScript + "</body>")
