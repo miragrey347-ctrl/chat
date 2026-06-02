@@ -202,6 +202,8 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   displaySettings?: DisplaySettings;
   imageData?: string[];
+  assistantAvatarUrl?: string | null;
+  assistantName?: string;
   onCopy?: () => void;
   onEdit?: (content: string) => void;
   onRegenerate?: () => void;
@@ -214,6 +216,8 @@ export default function ChatMessage({
   isStreaming,
   displaySettings,
   imageData,
+  assistantAvatarUrl,
+  assistantName,
   onEdit,
   onRegenerate,
   onDelete,
@@ -387,16 +391,21 @@ export default function ChatMessage({
 
       <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", gap: "8px" }}>
         {/* Avatar - assistant side */}
-        {ds.showAvatars && !isUser && (
-          <div style={{
-            width: "28px", height: "28px", borderRadius: "50%",
-            background: "var(--accent-muted)", color: "var(--accent)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "13px", fontWeight: 600, flexShrink: 0, marginTop: "2px",
-          }}>
-            {(message.model_used?.split("/").pop()?.[0] || "A").toUpperCase()}
-          </div>
-        )}
+        {ds.showAvatars && !isUser && (() => {
+          const initial = (assistantName?.[0] || message.model_used?.split("/").pop()?.[0] || "A").toUpperCase();
+          return assistantAvatarUrl ? (
+            <img src={assistantAvatarUrl} alt="" style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, marginTop: "2px" }} />
+          ) : (
+            <div style={{
+              width: "28px", height: "28px", borderRadius: "50%",
+              background: "var(--accent-muted)", color: "var(--accent)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "13px", fontWeight: 600, flexShrink: 0, marginTop: "2px",
+            }}>
+              {initial}
+            </div>
+          );
+        })()}
         <div style={{ minWidth: 0, maxWidth: isUser ? "80%" : undefined }}>
           {/* Name */}
           {ds.showNames && (
@@ -404,7 +413,9 @@ export default function ChatMessage({
               fontSize: "12px", fontWeight: 500, color: "var(--text-tertiary)",
               marginBottom: "4px", textAlign: isUser ? "right" : "left",
             }}>
-              {isUser ? "You" : (message.model_used?.split("/").pop() || "Assistant")}
+              {isUser
+                ? (typeof window !== "undefined" ? localStorage.getItem("user-name") : null) || "You"
+                : assistantName || (message.model_used?.split("/").pop() || "Assistant")}
             </div>
           )}
         <div
@@ -552,16 +563,23 @@ export default function ChatMessage({
         </div>
         </div>
         {/* Avatar - user side */}
-        {ds.showAvatars && isUser && (
-          <div style={{
-            width: "28px", height: "28px", borderRadius: "50%",
-            background: "var(--accent-muted)", color: "var(--accent)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "13px", fontWeight: 600, flexShrink: 0, marginTop: "2px",
-          }}>
-            U
-          </div>
-        )}
+        {ds.showAvatars && isUser && (() => {
+          const uAvatar = typeof window !== "undefined" ? localStorage.getItem("user-avatar") : null;
+          const uName = typeof window !== "undefined" ? localStorage.getItem("user-name") : null;
+          const initial = (uName?.[0] || "U").toUpperCase();
+          return uAvatar ? (
+            <img src={uAvatar} alt="" style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, marginTop: "2px" }} />
+          ) : (
+            <div style={{
+              width: "28px", height: "28px", borderRadius: "50%",
+              background: "var(--accent-muted)", color: "var(--accent)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "13px", fontWeight: 600, flexShrink: 0, marginTop: "2px",
+            }}>
+              {initial}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Interactive choice buttons */}

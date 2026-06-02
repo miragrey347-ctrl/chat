@@ -1631,19 +1631,26 @@ export default function ChatPage() {
             </div>
           )}
 
-          {messages.map((msg, i) => (
+          {messages.map((msg, i) => {
+            const currentAssistant = getCurrentAssistant();
+            const aId = currentAssistant?.id;
+            const aAvatarUrl = aId ? (typeof window !== "undefined" ? localStorage.getItem(`assistant-avatar-${aId}`) : null) : null;
+            return (
             <ChatMessage
               key={msg.id}
               message={msg}
               isStreaming={isStreaming && i === messages.length - 1 && msg.role === "assistant"}
               displaySettings={displaySettings}
               imageData={imageDataRef.current[msg.id]}
+              assistantAvatarUrl={aAvatarUrl}
+              assistantName={currentAssistant?.name}
               onEdit={msg.role === "user" ? (newContent) => handleEditResend(i, newContent) : undefined}
               onRegenerate={msg.role === "assistant" ? () => handleRegenerate(i) : undefined}
               onDelete={() => handleDeleteMessage(msg.id, i)}
               onChoiceSelect={msg.role === "assistant" ? (value) => handleSend(value) : undefined}
             />
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} style={{ height: "16px" }} />
         </div>
       </main>

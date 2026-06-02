@@ -1,7 +1,7 @@
 "use client";
 import { useLocale } from "@/lib/i18n";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { NavContext } from "@/app/settings/page";
 import type { Assistant } from "@/lib/types";
 import SettingsPageLayout, {
@@ -45,6 +45,9 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
   const [historyRefCount, setHistoryRefCount] = useState(5);
   const [models, setModels] = useState<{ model_id: string; display_name: string }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [assistantAvatar, setAssistantAvatar] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
 
   // Fetch assistant data if editing
   useEffect(() => {
@@ -79,9 +82,9 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
           Array.isArray(a.quick_messages) ? a.quick_messages : []
         );
         setMemoryEnabled(a.memory_enabled || false);
-        // These fields may not exist yet in the DB
         setHistoryRefEnabled((a as Record<string, unknown>).history_reference_enabled as boolean || false);
         setHistoryRefCount((a as Record<string, unknown>).history_reference_count as number || 5);
+        setAssistantAvatar(localStorage.getItem(`assistant-avatar-${id}`) || null);
       }
     } catch (e) {
       console.error("Failed to fetch assistant:", e);
@@ -111,9 +114,17 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const err = await res.json();
         alert(t("saveFailed"));
         return;
+      }
+      // Save avatar for new assistants
+      if (!assistantId && assistantAvatar) {
+        try {
+          const newAssistant = await res.json();
+          if (newAssistant?.id) {
+            localStorage.setItem(`assistant-avatar-${newAssistant.id}`, assistantAvatar);
+          }
+        } catch { /* skip */ }
       }
       nav.pop();
     } catch (e) {
@@ -158,6 +169,72 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
 
   return (
     <SettingsPageLayout nav={nav} title={isNew ? t("newAssistant") : t("editAssistantTitle")}>
+      {/* ── Avatar ── */}
+      <SectionLabel>{t("assistantAvatar")}</SectionLabel>
+      <SettingsCard>
+        <div style={{ padding: "16px", display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            onClick={() => avatarFileRef.current?.click()}
+            style={{
+              width: "56px", height: "56px", borderRadius: "50%",
+              background: assistantAvatar ? `url(${assistantAvatar}) center/cover` : "var(--accent-muted)",
+              color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: assistantAvatar ? 0 : "20px", fontWeight: 600, cursor: "pointer",
+              border: "2px dashed var(--border-color)", flexShrink: 0,
+            }}
+          >
+            {!assistantAvatar && (name?.[0]?.toUpperCase() || "A")}
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => avatarFileRef.current?.click()}
+              disabled={avatarUploading}
+              style={{
+                padding: "6px 14px", borderRadius: "8px",
+                border: "1px solid var(--border-color)",
+                background: "var(--bg-tertiary)", color: "var(--text-primary)",
+                fontSize: "13px", cursor: "pointer",
+              }}
+            >
+              {avatarUploading ? "..." : t("uploadAvatar")}
+            </button>
+            {assistantAvatar && (
+              <button
+                onClick={() => { setAssistantAvatar(null); if (assistantId) localStorage.removeItem(`assistant-avatar-${assistantId}`); }}
+                style={{
+                  padding: "6px 14px", borderRadius: "8px",
+                  border: "1px solid var(--border-color)",
+                  background: "transparent", color: "var(--text-tertiary)",
+                  fontSize: "13px", cursor: "pointer",
+                }}
+              >
+                {t("resetAvatar")}
+              </button>
+            )}
+          </div>
+        </div>
+        <input
+          ref={avatarFileRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setAvatarUploading(true);
+            try {
+              const reader = new FileReader();
+              const base64 = await new Promise<string>((resolve) => { reader.onload = () => resolve(reader.result as string); reader.readAsDataURL(file); });
+              const res = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filename: file.name, base64, mimeType: file.type }) });
+              const data = await res.json();
+              if (data.url) { setAssistantAvatar(data.url); if (assistantId) localStorage.setItem(`assistant-avatar-${assistantId}`, data.url); }
+            } catch { /* skip */ }
+            setAvatarUploading(false);
+            e.target.value = "";
+          }}
+        />
+      </SettingsCard>
+
       {/* ── 基础设定 ── */}
       <SectionLabel>{ t("basicSettings") }</SectionLabel>
       <SettingsCard>

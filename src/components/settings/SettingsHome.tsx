@@ -10,6 +10,12 @@ interface SettingsHomeProps {
 
 /* ── Inline SVG icons (20×20, strokeWidth 1.5, currentColor) ── */
 const I = {
+  user: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
   palette: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.97-4.48-9-10-9z"/>
@@ -240,6 +246,13 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
         {/* ── 通用设置 ── */}
         <SectionTitle>{t("general")}</SectionTitle>
         <Card>
+          <SettingRow
+            icon={I.user}
+            label={t("userProfile")}
+            value={(() => { try { return localStorage.getItem("user-name") || ""; } catch { return ""; } })()}
+            onClick={() => nav.push({ id: "user-profile", title: t("userProfile") })}
+          />
+          <Divider />
           <SettingRow
             icon={I.palette}
             label={t("colorMode")}

@@ -13,6 +13,7 @@ import VoiceService from "@/components/settings/VoiceService";
 import GlobalMemory from "@/components/settings/GlobalMemory";
 import DataBackup from "@/components/settings/DataBackup";
 import MemoryManage from "@/components/settings/MemoryManage";
+import UserProfile from "@/components/settings/UserProfile";
 
 export interface NavPage {
   id: string;
@@ -97,6 +98,8 @@ export default function SettingsPage() {
         return <GlobalMemory nav={nav} />;
       case "data-backup":
         return <DataBackup nav={nav} />;
+      case "user-profile":
+        return <UserProfile nav={nav} />;
       case "memory-manage":
         return (
           <MemoryManage
