@@ -45,6 +45,7 @@ export default function ChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const prevConvIdRef = useRef<string | null>(null);
   const imageDataRef = useRef<Record<string, string[]>>({});
+  const searchSourcesRef = useRef<Record<string, Array<{ title: string; snippet: string; url: string }>>>({});
 
   // Load conversations and assistants on mount
   useEffect(() => {
@@ -555,7 +556,7 @@ export default function ChatPage() {
       if (last.role === "assistant") {
         updated[updated.length - 1] = {
           ...last,
-          content: fullContent,
+          content: savedContent,
           input_tokens: inputTokens || undefined,
           output_tokens: outputTokens || undefined,
           cache_status: cacheStatus || undefined,
@@ -873,11 +874,44 @@ export default function ChatPage() {
     // Save new user message to DB
     saveMessage({ conversation_id: currentConvId, role: "user", content: newContent });
 
+    // Search if enabled
+    let editSearchContext = "";
+    let editSearchSources: Array<{ title: string; snippet: string; url: string }> = [];
+    if (searchMode) {
+      setSearching(true);
+      try {
+        const maxResults = parseInt(localStorage.getItem("search-max-results") || "5");
+        const searchRes = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: newContent, maxResults }),
+        });
+        const searchData = await searchRes.json();
+        if (searchData.results && searchData.results.length > 0) {
+          editSearchSources = searchData.results.map((r: { title: string; snippet: string; url: string }) => ({
+            title: r.title, snippet: r.snippet, url: r.url,
+          }));
+          editSearchContext = "\n\n[搜索结果]\n" +
+            searchData.results.map((r: { title: string; snippet: string; url: string }, i: number) =>
+              `${i + 1}. ${r.title}\n${r.snippet}\n来源: ${r.url}`
+            ).join("\n\n") +
+            "\n[搜索结果结束]\n\n请根据以上搜索结果回答用户的问题，在回答中标注信息来源。如果搜索结果不足以回答问题，请说明并提供你已知的信息。";
+        }
+      } catch { /* skip search error */ }
+      setSearching(false);
+    }
+
     // Build API messages
     const systemPrompt = getCurrentSystemPrompt();
     const apiMessages: { role: string; content: string }[] = [];
     if (systemPrompt) apiMessages.push({ role: "system", content: systemPrompt });
-    updatedKept.forEach((m) => apiMessages.push({ role: m.role, content: m.content }));
+    updatedKept.forEach((m, i) => {
+      if (i === updatedKept.length - 1 && editSearchContext) {
+        apiMessages.push({ role: m.role, content: m.content + editSearchContext });
+      } else {
+        apiMessages.push({ role: m.role, content: m.content });
+      }
+    });
 
     try {
       abortRef.current = new AbortController();
@@ -893,7 +927,7 @@ export default function ChatPage() {
       if (!reader) throw new Error("No reader");
 
       const { fullContent, thinkingContent, usageData, toolCalls } = await processStream(reader);
-      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData, toolCalls);
+      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData, toolCalls, editSearchSources);
     } catch (error: unknown) {
       handleStreamError(error);
     } finally {
@@ -936,11 +970,47 @@ export default function ChatPage() {
     setMessages([...kept, newAssistant]);
     setIsStreaming(true);
 
+    // Search if enabled
+    let regenSearchContext = "";
+    let regenSearchSources: Array<{ title: string; snippet: string; url: string }> = [];
+    if (searchMode && kept.length > 0) {
+      const lastUserMsg = [...kept].reverse().find((m) => m.role === "user");
+      if (lastUserMsg) {
+        setSearching(true);
+        try {
+          const maxResults = parseInt(localStorage.getItem("search-max-results") || "5");
+          const searchRes = await fetch("/api/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: lastUserMsg.content.slice(0, 200), maxResults }),
+          });
+          const searchData = await searchRes.json();
+          if (searchData.results && searchData.results.length > 0) {
+            regenSearchSources = searchData.results.map((r: { title: string; snippet: string; url: string }) => ({
+              title: r.title, snippet: r.snippet, url: r.url,
+            }));
+            regenSearchContext = "\n\n[搜索结果]\n" +
+              searchData.results.map((r: { title: string; snippet: string; url: string }, i: number) =>
+                `${i + 1}. ${r.title}\n${r.snippet}\n来源: ${r.url}`
+              ).join("\n\n") +
+              "\n[搜索结果结束]\n\n请根据以上搜索结果回答用户的问题，在回答中标注信息来源。";
+          }
+        } catch { /* skip */ }
+        setSearching(false);
+      }
+    }
+
     // Build API messages
     const systemPrompt = getCurrentSystemPrompt();
     const apiMessages: { role: string; content: string }[] = [];
     if (systemPrompt) apiMessages.push({ role: "system", content: systemPrompt });
-    kept.forEach((m) => apiMessages.push({ role: m.role, content: m.content }));
+    kept.forEach((m, i) => {
+      if (i === kept.length - 1 && m.role === "user" && regenSearchContext) {
+        apiMessages.push({ role: m.role, content: m.content + regenSearchContext });
+      } else {
+        apiMessages.push({ role: m.role, content: m.content });
+      }
+    });
 
     try {
       abortRef.current = new AbortController();
@@ -957,7 +1027,7 @@ export default function ChatPage() {
       if (!reader) throw new Error("No reader");
 
       const { fullContent, thinkingContent, usageData, toolCalls } = await processStream(reader);
-      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData, toolCalls);
+      finalizeAssistantMessage(currentConvId, fullContent, thinkingContent, usageData, toolCalls, regenSearchSources);
     } catch (error: unknown) {
       handleStreamError(error);
     } finally {

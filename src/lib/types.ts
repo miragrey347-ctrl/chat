@@ -10,6 +10,7 @@ export interface Message {
   cache_status?: string | null;
   cached_tokens?: number | null;
   tool_calls?: Array<{ name: string; arguments: string }> | null;
+  search_sources?: Array<{ title: string; snippet: string; url: string }> | null;
   created_at: string;
 }
 
