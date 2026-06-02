@@ -547,12 +547,12 @@ export default function ChatMessage({
                 key="visual"
                 srcDoc={iframeDoc}
                 sandbox="allow-scripts"
-                style={{ width: "100%", height: (height || 300) + "px", border: "none", display: "block", background: "transparent", marginTop: "8px", overflow: "hidden" }}
+                style={{ width: "100%", height: (height || 400) + "px", border: "none", display: "block", background: "transparent", marginTop: "8px" }}
                 onLoad={(e) => {
                   const iframe = e.target as HTMLIFrameElement;
                   try {
                     const h = iframe.contentDocument?.body?.scrollHeight;
-                    if (h && !height) iframe.style.height = Math.min(Math.max(h + 10, 100), 600) + "px";
+                    if (h && !height) iframe.style.height = Math.max(h + 10, 100) + "px";
                   } catch { /* cross-origin */ }
                 }}
               />
