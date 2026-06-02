@@ -385,10 +385,30 @@ export default function ChatMessage({
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start" }}>
+      <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", gap: "8px" }}>
+        {/* Avatar - assistant side */}
+        {ds.showAvatars && !isUser && (
+          <div style={{
+            width: "28px", height: "28px", borderRadius: "50%",
+            background: "var(--accent-muted)", color: "var(--accent)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "13px", fontWeight: 600, flexShrink: 0, marginTop: "2px",
+          }}>
+            {(message.model_used?.split("/").pop()?.[0] || "A").toUpperCase()}
+          </div>
+        )}
+        <div style={{ minWidth: 0, maxWidth: isUser ? "80%" : undefined }}>
+          {/* Name */}
+          {ds.showNames && (
+            <div style={{
+              fontSize: "12px", fontWeight: 500, color: "var(--text-tertiary)",
+              marginBottom: "4px", textAlign: isUser ? "right" : "left",
+            }}>
+              {isUser ? "You" : (message.model_used?.split("/").pop() || "Assistant")}
+            </div>
+          )}
         <div
           style={{
-            maxWidth: isUser ? "80%" : undefined,
             borderRadius: isUser ? "20px" : undefined,
             padding: isUser ? "12px 16px" : undefined,
             background: isUser ? "var(--bg-message-user)" : undefined,
@@ -530,6 +550,18 @@ export default function ChatMessage({
             renderContent(displayContent.replace(/!\[[^\]]*\]\([^)]+\)/g, "").replace(/\[图片: [^\]]+\]/g, "").trim())
           )}
         </div>
+        </div>
+        {/* Avatar - user side */}
+        {ds.showAvatars && isUser && (
+          <div style={{
+            width: "28px", height: "28px", borderRadius: "50%",
+            background: "var(--accent-muted)", color: "var(--accent)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "13px", fontWeight: 600, flexShrink: 0, marginTop: "2px",
+          }}>
+            U
+          </div>
+        )}
       </div>
 
       {/* Interactive choice buttons */}
