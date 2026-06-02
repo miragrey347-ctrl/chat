@@ -4,6 +4,7 @@ import { useLocale } from "@/lib/i18n";
 import { useState, useEffect, useRef } from "react";
 import type { NavContext } from "@/app/settings/page";
 import SettingsPageLayout, { SettingsCard, SectionLabel } from "./SettingsPageLayout";
+import { compressImage } from "@/lib/imageUtils";
 
 export default function UserProfile({ nav }: { nav: NavContext }) {
   const { t } = useLocale();
@@ -25,22 +26,22 @@ export default function UserProfile({ nav }: { nav: NavContext }) {
   const handleUpload = async (file: File) => {
     setUploading(true);
     try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
+      const { base64, mimeType } = await compressImage(file);
       const res = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, base64, mimeType: file.type }),
+        body: JSON.stringify({ filename: "avatar.jpg", base64, mimeType }),
       });
       const data = await res.json();
       if (data.url) {
         setAvatarUrl(data.url);
         localStorage.setItem("user-avatar", data.url);
+      } else {
+        alert(data.error || "Upload failed");
       }
-    } catch { /* skip */ }
+    } catch (e) {
+      alert("Upload failed: " + (e instanceof Error ? e.message : "unknown error"));
+    }
     setUploading(false);
   };
 

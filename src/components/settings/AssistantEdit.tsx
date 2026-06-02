@@ -4,6 +4,7 @@ import { useLocale } from "@/lib/i18n";
 import { useState, useEffect, useRef } from "react";
 import type { NavContext } from "@/app/settings/page";
 import type { Assistant } from "@/lib/types";
+import { compressImage } from "@/lib/imageUtils";
 import SettingsPageLayout, {
   SettingsCard,
   SettingsToggleRow,
@@ -223,12 +224,22 @@ export default function AssistantEdit({ nav, assistantId }: AssistantEditProps) 
             if (!file) return;
             setAvatarUploading(true);
             try {
-              const reader = new FileReader();
-              const base64 = await new Promise<string>((resolve) => { reader.onload = () => resolve(reader.result as string); reader.readAsDataURL(file); });
-              const res = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filename: file.name, base64, mimeType: file.type }) });
+              const { base64, mimeType } = await compressImage(file);
+              const res = await fetch("/api/upload", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ filename: "assistant-avatar.jpg", base64, mimeType }),
+              });
               const data = await res.json();
-              if (data.url) { setAssistantAvatar(data.url); if (assistantId) localStorage.setItem(`assistant-avatar-${assistantId}`, data.url); }
-            } catch { /* skip */ }
+              if (data.url) {
+                setAssistantAvatar(data.url);
+                if (assistantId) localStorage.setItem(`assistant-avatar-${assistantId}`, data.url);
+              } else {
+                alert(data.error || "Upload failed");
+              }
+            } catch (err) {
+              alert("Upload failed: " + (err instanceof Error ? err.message : "unknown"));
+            }
             setAvatarUploading(false);
             e.target.value = "";
           }}
