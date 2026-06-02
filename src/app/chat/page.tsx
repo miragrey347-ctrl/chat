@@ -521,16 +521,20 @@ export default function ChatPage() {
   };
 
   // Finalize assistant message: extract stats, save to DB, update UI
-  const finalizeAssistantMessage = (convId: string, fullContent: string, thinkingContent: string, usageData: Record<string, unknown>, toolCalls?: Array<{ name: string; arguments: string }>) => {
+  const finalizeAssistantMessage = (convId: string, fullContent: string, thinkingContent: string, usageData: Record<string, unknown>, toolCalls?: Array<{ name: string; arguments: string }>, searchSources?: Array<{ title: string; snippet: string; url: string }>) => {
     const { cacheStatus, cachedTokens } = extractCacheInfo(usageData);
     const inputTokens = (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null;
     const outputTokens = (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null;
 
-    // Embed tool_calls in content for persistence (parsed back out during render)
+    // Embed tool_calls in content for persistence
     let savedContent = fullContent;
     if (toolCalls && toolCalls.length > 0) {
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(toolCalls))));
-      savedContent = fullContent + `\n\n<!-- TOOL_CALLS:${encoded} -->`;
+      savedContent = savedContent + `\n\n<!-- TOOL_CALLS:${encoded} -->`;
+    }
+    if (searchSources && searchSources.length > 0) {
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(searchSources))));
+      savedContent = savedContent + `\n\n<!-- SEARCH_SOURCES:${encoded} -->`;
     }
 
     saveMessage({
@@ -734,6 +738,7 @@ export default function ChatPage() {
 
     // Search mode: fetch search results and inject as context
     let searchContext = "";
+    let searchSources: Array<{ title: string; snippet: string; url: string }> = [];
     if (searchMode) {
       setSearching(true);
       try {
@@ -745,6 +750,9 @@ export default function ChatPage() {
         });
         const searchData = await searchRes.json();
         if (searchData.results && searchData.results.length > 0) {
+          searchSources = searchData.results.map((r: { title: string; snippet: string; url: string }) => ({
+            title: r.title, snippet: r.snippet, url: r.url,
+          }));
           searchContext = "\n\n[搜索结果]\n" +
             searchData.results.map((r: { title: string; snippet: string; url: string }, i: number) =>
               `${i + 1}. ${r.title}\n${r.snippet}\n来源: ${r.url}`
@@ -815,7 +823,7 @@ export default function ChatPage() {
       if (!reader) throw new Error("No reader");
 
       const { fullContent, thinkingContent, usageData, toolCalls } = await processStream(reader);
-      finalizeAssistantMessage(convId!, fullContent, thinkingContent, usageData, toolCalls);
+      finalizeAssistantMessage(convId!, fullContent, thinkingContent, usageData, toolCalls, searchSources);
     } catch (error: unknown) {
       handleStreamError(error);
     } finally {

@@ -265,6 +265,7 @@ const translations: Record<string, Record<Locale, string>> = {
   "cacheWriteLabel": { zh: "缓存写入", en: "Cache write" },
   "cacheHitLabel": { zh: "缓存命中", en: "Cache hit" },
   "hitRateLabel": { zh: "命中率", en: "Hit rate" },
+  "sources": { zh: "个来源", en: "sources" },
   "focusInput": { zh: "聚焦输入框", en: "Focus Input" },
   "showShortcuts": { zh: "显示快捷键", en: "Show Shortcuts" },
   "closePopup": { zh: "关闭弹窗 / 停止生成", en: "Close / Stop generation" },

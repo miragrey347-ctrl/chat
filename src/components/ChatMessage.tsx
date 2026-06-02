@@ -223,7 +223,7 @@ export default function ChatMessage({
   const [showActions, setShowActions] = useState(false);
   const { t } = useLocale();
 
-  // Parse embedded tool_calls from content (persisted as HTML comment)
+  // Parse embedded tool_calls from content
   const toolCallsFromContent = useMemo(() => {
     const match = message.content.match(/<!-- TOOL_CALLS:([A-Za-z0-9+/=]+) -->/);
     if (!match) return null;
@@ -232,11 +232,23 @@ export default function ChatMessage({
     } catch { return null; }
   }, [message.content]);
 
-  // Use tool_calls from props (streaming) or from persisted content (after refresh)
-  const effectiveToolCalls = message.tool_calls || toolCallsFromContent;
+  // Parse embedded search sources from content
+  const searchSourcesFromContent = useMemo(() => {
+    const match = message.content.match(/<!-- SEARCH_SOURCES:([A-Za-z0-9+/=]+) -->/);
+    if (!match) return null;
+    try {
+      return JSON.parse(decodeURIComponent(escape(atob(match[1])))) as Array<{ title: string; snippet: string; url: string }>;
+    } catch { return null; }
+  }, [message.content]);
 
-  // Strip tool_calls marker from displayed content
-  const displayContent = message.content.replace(/\n*<!-- TOOL_CALLS:[A-Za-z0-9+/=]+ -->/, "").trim();
+  const effectiveToolCalls = message.tool_calls || toolCallsFromContent;
+  const searchSources = searchSourcesFromContent;
+
+  // Strip markers from displayed content
+  const displayContent = message.content
+    .replace(/\n*<!-- TOOL_CALLS:[A-Za-z0-9+/=]+ -->/, "")
+    .replace(/\n*<!-- SEARCH_SOURCES:[A-Za-z0-9+/=]+ -->/, "")
+    .trim();
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [copied, setCopied] = useState(false);
@@ -582,6 +594,66 @@ reportHeight();
 
         return elements.length > 0 ? <>{elements}</> : null;
       })()}
+
+      {/* Search source cards */}
+      {!isStreaming && searchSources && searchSources.length > 0 && (
+        <details style={{ marginTop: "10px" }}>
+          <summary style={{
+            cursor: "pointer",
+            fontSize: "13px",
+            color: "var(--text-tertiary)",
+            userSelect: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            listStyle: "none",
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            {searchSources.length} {t("sources") || "sources"}
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "8px" }}>
+            {searchSources.map((s, i) => {
+              const domain = (() => { try { return new URL(s.url).hostname.replace("www.", ""); } catch { return s.url; } })();
+              return (
+                <a
+                  key={i}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    background: "var(--bg-tertiary)",
+                    textDecoration: "none",
+                    color: "var(--text-primary)",
+                    transition: "opacity 0.15s",
+                  }}
+                >
+                  <img
+                    src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                    alt=""
+                    width={20}
+                    height={20}
+                    style={{ borderRadius: "4px", flexShrink: 0 }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: "13px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {s.title}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                      {domain}
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </details>
+      )}
 
       {/* Token stats */}
       {ds.showTokenStats && !isUser && !isStreaming && (message.input_tokens || message.output_tokens) && (
