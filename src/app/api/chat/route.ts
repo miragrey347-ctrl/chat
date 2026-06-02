@@ -90,8 +90,8 @@ export async function POST(request: Request) {
       openRouterBody.stream_options = { include_usage: true };
     }
 
-    // Add tools if provided
-    if (tools && tools.length > 0) {
+    // Add tools if provided (skip when thinking mode is on - incompatible with Anthropic extended thinking)
+    if (tools && tools.length > 0 && !(thinking && thinking.enabled)) {
       openRouterBody.tools = tools;
     }
 
