@@ -171,6 +171,32 @@ function formatTime(dateStr: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Auto-sizing iframe for render_visual
+function VisualIframe({ srcDoc, msgId, fixedHeight }: { srcDoc: string; msgId: string; fixedHeight?: number }) {
+  const ref = React.useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState(fixedHeight || 200);
+
+  useEffect(() => {
+    if (fixedHeight) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "iframe-height" && e.data.id === msgId) {
+        setHeight(Math.max(e.data.height, 50));
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [msgId, fixedHeight]);
+
+  return (
+    <iframe
+      ref={ref}
+      srcDoc={srcDoc}
+      sandbox="allow-scripts"
+      style={{ width: "100%", height: height + "px", border: "none", display: "block", background: "transparent", marginTop: "8px" }}
+    />
+  );
+}
+
 interface ChatMessageProps {
   message: Message;
   isStreaming?: boolean;
@@ -539,23 +565,17 @@ export default function ChatMessage({
         if (visualCall) {
           try {
             const { html, height } = JSON.parse(visualCall.arguments) as { title?: string; html: string; height?: number };
+            // Inject auto-height reporting script
+            const heightScript = `<script>
+function reportHeight(){var h=document.body.scrollHeight;window.parent.postMessage({type:'iframe-height',height:h,id:'${message.id}'},'*');}
+new ResizeObserver(reportHeight).observe(document.body);
+reportHeight();
+</script>`;
             const iframeDoc = html.includes("<html") || html.includes("<!DOCTYPE")
-              ? html
-              : `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,system-ui,sans-serif;background:transparent;max-width:100%;overflow-x:hidden;}img,svg,canvas{max-width:100%;height:auto;}div{max-width:100%;}</style></head><body>${html}</body></html>`;
+              ? html.replace("</body>", heightScript + "</body>")
+              : `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,system-ui,sans-serif;background:transparent;overflow:hidden;}img,svg,canvas{max-width:100%;height:auto;}</style></head><body>${html}${heightScript}</body></html>`;
             elements.push(
-              <iframe
-                key="visual"
-                srcDoc={iframeDoc}
-                sandbox="allow-scripts"
-                style={{ width: "100%", height: (height || 400) + "px", border: "none", display: "block", background: "transparent", marginTop: "8px" }}
-                onLoad={(e) => {
-                  const iframe = e.target as HTMLIFrameElement;
-                  try {
-                    const h = iframe.contentDocument?.body?.scrollHeight;
-                    if (h && !height) iframe.style.height = Math.max(h + 10, 100) + "px";
-                  } catch { /* cross-origin */ }
-                }}
-              />
+              <VisualIframe key="visual" srcDoc={iframeDoc} msgId={message.id} fixedHeight={height} />
             );
           } catch { /* skip */ }
         }
