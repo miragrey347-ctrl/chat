@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#f5efe7"/>
+  <g transform="translate(256,248)" fill="none" stroke="#2c2c2c" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Main A stroke -->
+    <path d="M-85,75 Q-95,-10 -50,-95 Q-20,-155 15,-95 Q55,-25 90,75" />
+    <!-- Cross stroke -->
+    <path d="M-45,15 Q30,35 95,75" />
+    <!-- Dot -->
+    <circle cx="105" cy="100" r="8" fill="#2c2c2c" stroke="none"/>
+  </g>
+</svg>
