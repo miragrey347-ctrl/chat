@@ -9,13 +9,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Chat",
-  description: "Personal AI Chat",
+  title: "Aethera",
+  description: "Aethera – Personal AI Chat",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Chat",
+    title: "Aethera",
   },
   icons: {
     icon: "/icon-192.png",
@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
