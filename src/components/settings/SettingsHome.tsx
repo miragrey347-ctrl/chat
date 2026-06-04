@@ -193,6 +193,12 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
     setCurrentTheme(value);
     localStorage.setItem("color-mode", value);
     document.documentElement.setAttribute("data-theme", value);
+    // 同步更新 PWA 状态栏颜色
+    const resolved = value === "system"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : value;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", resolved === "dark" ? "#2b2520" : "#f5efe7");
     setShowThemePicker(false);
   };
 
