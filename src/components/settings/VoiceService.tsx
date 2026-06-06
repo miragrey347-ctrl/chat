@@ -23,7 +23,6 @@ const inputStyle: React.CSSProperties = {
 
 const selectStyle: React.CSSProperties = {
   ...inputStyle,
-  fontFamily: "monospace",
   paddingRight: "36px",
   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7068'/%3E%3C/svg%3E")`,
   backgroundRepeat: "no-repeat",
@@ -31,68 +30,44 @@ const selectStyle: React.CSSProperties = {
   appearance: "none",
 };
 
-const MODELS = [
-  { id: "x-ai/grok-voice-tts-1.0", label: "Grok Voice TTS" },
-  { id: "google/gemini-3.1-flash-tts-preview", label: "Gemini Flash TTS" },
-  { id: "microsoft/mai-voice-2", label: "MAI-Voice-2 (Microsoft)" },
-  { id: "hexgrad/kokoro-82m", label: "Kokoro 82M (多语言)" },
-  { id: "canopylabs/orpheus-tts-3b", label: "Orpheus 3B" },
-  { id: "openai/gpt-4o-mini-tts-2025-12-15", label: "GPT-4o Mini TTS" },
-  { id: "mistralai/voxtral-mini-tts-2603", label: "Voxtral Mini TTS" },
-];
+const OPENAI_VOICES = ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];
 
-const VOICES: Record<string, string[]> = {
-  "x-ai/grok-voice-tts-1.0": ["Eve", "Ara", "Rex", "Sal", "Leo"],
-  "openai/gpt-4o-mini-tts-2025-12-15": ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],
-  "canopylabs/orpheus-tts-3b": ["tara", "leah", "jess", "leo", "dan", "mia", "zac"],
-};
-
-const DEFAULT_MODEL = "x-ai/grok-voice-tts-1.0";
-const DEFAULT_VOICE = "Sal";
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ padding: "14px 16px" }}>
+      <label style={{ fontSize: "13px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
 
 export default function VoiceService({ nav }: { nav: NavContext }) {
   const { t } = useLocale();
-  const [model, setModel] = useState(DEFAULT_MODEL);
-  const [voice, setVoice] = useState(DEFAULT_VOICE);
+  const [service, setService] = useState("openai");
+  const [oaiKey, setOaiKey] = useState("");
+  const [oaiModel, setOaiModel] = useState("tts-1");
+  const [oaiVoice, setOaiVoice] = useState("nova");
+  const [elKey, setElKey] = useState("");
+  const [elModel, setElModel] = useState("eleven_multilingual_v2");
+  const [elVoice, setElVoice] = useState("");
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const validIds = MODELS.map((m) => m.id);
-    let savedModel = localStorage.getItem("tts-model") || DEFAULT_MODEL;
-    const savedVoice = localStorage.getItem("tts-voice") || DEFAULT_VOICE;
-    // Migrate: if stored model ID is invalid, reset to default
-    if (!validIds.includes(savedModel)) {
-      savedModel = DEFAULT_MODEL;
-      localStorage.setItem("tts-model", DEFAULT_MODEL);
-      localStorage.setItem("tts-voice", DEFAULT_VOICE);
-    }
-    setModel(savedModel);
-    setVoice(!validIds.includes(localStorage.getItem("tts-model") || "") ? DEFAULT_VOICE : savedVoice);
-    // Ensure defaults are persisted
-    if (!localStorage.getItem("tts-model")) localStorage.setItem("tts-model", DEFAULT_MODEL);
-    if (!localStorage.getItem("tts-voice")) localStorage.setItem("tts-voice", DEFAULT_VOICE);
+    setService(localStorage.getItem("tts-service") || "openai");
+    setOaiKey(localStorage.getItem("tts-oai-key") || "");
+    setOaiModel(localStorage.getItem("tts-oai-model") || "tts-1");
+    setOaiVoice(localStorage.getItem("tts-oai-voice") || "nova");
+    setElKey(localStorage.getItem("tts-el-key") || "");
+    setElModel(localStorage.getItem("tts-el-model") || "eleven_multilingual_v2");
+    setElVoice(localStorage.getItem("tts-el-voice") || "");
   }, []);
 
-  const save = (m: string, v: string) => {
-    localStorage.setItem("tts-model", m);
-    localStorage.setItem("tts-voice", v);
-  };
-
-  const handleModelChange = (newModel: string) => {
-    setModel(newModel);
-    const voices = VOICES[newModel];
-    const newVoice = voices ? voices[0] : voice;
-    setVoice(newVoice);
-    save(newModel, newVoice);
-    setError("");
-  };
-
-  const handleVoiceChange = (newVoice: string) => {
-    setVoice(newVoice);
-    save(model, newVoice);
-    setError("");
+  const save = (key: string, val: string) => {
+    localStorage.setItem(key, val);
   };
 
   const handlePreview = async () => {
@@ -103,6 +78,10 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
       setPreviewing(false);
       return;
     }
+    const key = service === "openai" ? oaiKey : elKey;
+    if (!key) { setError("请先填写 API Key"); return; }
+    if (service === "elevenlabs" && !elVoice) { setError("请填写 Voice ID"); return; }
+
     setPreviewing(true);
     setError("");
     try {
@@ -110,9 +89,11 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          service,
+          apiKey: key,
           text: t("ttsPreviewText"),
-          model,
-          voice,
+          model: service === "openai" ? oaiModel : elModel,
+          voice: service === "openai" ? oaiVoice : elVoice,
         }),
       });
       if (!res.ok) {
@@ -120,21 +101,12 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         throw new Error(errBody || `HTTP ${res.status}`);
       }
       const blob = await res.blob();
-      if (blob.size === 0) throw new Error("Empty audio response");
+      if (blob.size === 0) throw new Error("Empty audio");
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
-        setPreviewing(false);
-      };
-      audio.onerror = () => {
-        URL.revokeObjectURL(url);
-        audioRef.current = null;
-        setPreviewing(false);
-        setError("Audio playback failed");
-      };
+      audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; setPreviewing(false); };
+      audio.onerror = () => { URL.revokeObjectURL(url); audioRef.current = null; setPreviewing(false); setError("Playback failed"); };
       await audio.play();
     } catch (e) {
       setPreviewing(false);
@@ -142,63 +114,103 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-      }
-    };
-  }, []);
-
-  const voiceList = VOICES[model];
+  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ""; } }; }, []);
 
   return (
     <SettingsPageLayout nav={nav} title={t("voiceService")}>
-      <SectionLabel>{t("modelLabel")}</SectionLabel>
+      <SectionLabel>{t("defaultTts")}</SectionLabel>
       <SettingsCard>
         <div style={{ padding: "14px 16px" }}>
           <select
-            value={model}
-            onChange={(e) => handleModelChange(e.target.value)}
+            value={service}
+            onChange={(e) => { setService(e.target.value); save("tts-service", e.target.value); setError(""); }}
             style={selectStyle}
           >
-            {MODELS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
+            <option value="openai">OpenAI TTS</option>
+            <option value="elevenlabs">ElevenLabs</option>
           </select>
-          <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "6px" }}>
-            OpenRouter /audio/speech
-          </p>
         </div>
       </SettingsCard>
 
-      <SectionLabel>{t("voiceLabel")}</SectionLabel>
-      <SettingsCard>
-        <div style={{ padding: "14px 16px" }}>
-          {voiceList ? (
-            <select
-              value={voice}
-              onChange={(e) => handleVoiceChange(e.target.value)}
-              style={selectStyle}
-            >
-              {voiceList.map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              value={voice}
-              onChange={(e) => setVoice(e.target.value)}
-              onBlur={() => save(model, voice)}
-              placeholder="voice name"
-              style={{ ...inputStyle, fontFamily: "monospace" }}
-            />
-          )}
-        </div>
-      </SettingsCard>
+      {service === "openai" && (
+        <>
+          <SectionLabel>OpenAI TTS</SectionLabel>
+          <SettingsCard>
+            <Field label="API Key">
+              <input
+                type="password"
+                value={oaiKey}
+                onChange={(e) => { setOaiKey(e.target.value); save("tts-oai-key", e.target.value); }}
+                placeholder="sk-..."
+                style={inputStyle}
+              />
+            </Field>
+            <SettingsDivider />
+            <Field label={t("modelLabel")}>
+              <select
+                value={oaiModel}
+                onChange={(e) => { setOaiModel(e.target.value); save("tts-oai-model", e.target.value); }}
+                style={selectStyle}
+              >
+                <option value="tts-1">TTS-1</option>
+                <option value="tts-1-hd">TTS-1 HD</option>
+                <option value="gpt-4o-mini-tts">GPT-4o Mini TTS</option>
+              </select>
+            </Field>
+            <SettingsDivider />
+            <Field label={t("voiceLabel")}>
+              <select
+                value={oaiVoice}
+                onChange={(e) => { setOaiVoice(e.target.value); save("tts-oai-voice", e.target.value); }}
+                style={selectStyle}
+              >
+                {OPENAI_VOICES.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </Field>
+          </SettingsCard>
+        </>
+      )}
+
+      {service === "elevenlabs" && (
+        <>
+          <SectionLabel>ElevenLabs</SectionLabel>
+          <SettingsCard>
+            <Field label="API Key">
+              <input
+                type="password"
+                value={elKey}
+                onChange={(e) => { setElKey(e.target.value); save("tts-el-key", e.target.value); }}
+                placeholder="xi-..."
+                style={inputStyle}
+              />
+            </Field>
+            <SettingsDivider />
+            <Field label={t("modelLabel")}>
+              <select
+                value={elModel}
+                onChange={(e) => { setElModel(e.target.value); save("tts-el-model", e.target.value); }}
+                style={selectStyle}
+              >
+                <option value="eleven_multilingual_v2">Multilingual v2</option>
+                <option value="eleven_turbo_v2_5">Turbo v2.5</option>
+                <option value="eleven_flash_v2_5">Flash v2.5</option>
+              </select>
+            </Field>
+            <SettingsDivider />
+            <Field label="Voice ID">
+              <input
+                value={elVoice}
+                onChange={(e) => { setElVoice(e.target.value); save("tts-el-voice", e.target.value); }}
+                placeholder="Voice ID"
+                style={{ ...inputStyle, fontFamily: "monospace" }}
+              />
+              <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "4px" }}>
+                elevenlabs.io → Voices → 复制 Voice ID
+              </p>
+            </Field>
+          </SettingsCard>
+        </>
+      )}
 
       <div style={{ padding: "16px 0", display: "flex", gap: "10px", alignItems: "center" }}>
         <button

@@ -262,13 +262,11 @@ export default function ChatMessage({
 
   const handleSpeak = async () => {
     if (speaking || ttsLoading) {
-      // Stop
       if (ttsAudioRef.current) {
         ttsAudioRef.current.pause();
         ttsAudioRef.current.src = "";
         ttsAudioRef.current = null;
       }
-      window.speechSynthesis.cancel();
       setSpeaking(false);
       setTtsLoading(false);
       return;
@@ -280,21 +278,37 @@ export default function ChatMessage({
       .trim();
     if (!text) return;
 
-    const VALID_MODELS = ["x-ai/grok-voice-tts-1.0", "google/gemini-3.1-flash-tts-preview", "microsoft/mai-voice-2", "hexgrad/kokoro-82m", "canopylabs/orpheus-tts-3b", "openai/gpt-4o-mini-tts-2025-12-15", "mistralai/voxtral-mini-tts-2603"];
-    let ttsModel = localStorage.getItem("tts-model") || "x-ai/grok-voice-tts-1.0";
-    const ttsVoice = localStorage.getItem("tts-voice") || "Sal";
-    if (!VALID_MODELS.includes(ttsModel)) {
-      ttsModel = "x-ai/grok-voice-tts-1.0";
-      localStorage.setItem("tts-model", ttsModel);
-      localStorage.setItem("tts-voice", "Sal");
+    const service = localStorage.getItem("tts-service") || "openai";
+    const apiKey = service === "openai"
+      ? localStorage.getItem("tts-oai-key")
+      : localStorage.getItem("tts-el-key");
+
+    if (!apiKey) {
+      // No API key configured — fall back to browser TTS
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "zh-CN";
+      utterance.rate = 1.0;
+      utterance.onend = () => setSpeaking(false);
+      utterance.onerror = () => setSpeaking(false);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+      setSpeaking(true);
+      return;
     }
+
+    const model = service === "openai"
+      ? (localStorage.getItem("tts-oai-model") || "tts-1")
+      : (localStorage.getItem("tts-el-model") || "eleven_multilingual_v2");
+    const voice = service === "openai"
+      ? (localStorage.getItem("tts-oai-voice") || "nova")
+      : (localStorage.getItem("tts-el-voice") || "");
 
     setTtsLoading(true);
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, model: ttsModel, voice: ttsVoice }),
+        body: JSON.stringify({ service, apiKey, text, model, voice }),
       });
       if (!res.ok) {
         const errText = await res.text();
