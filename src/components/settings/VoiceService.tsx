@@ -62,7 +62,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
     setOaiModel(localStorage.getItem("tts-oai-model") || "tts-1");
     setOaiVoice(localStorage.getItem("tts-oai-voice") || "nova");
     setElKey(localStorage.getItem("tts-el-key") || "");
-    setElModel(localStorage.getItem("tts-el-model") || "eleven_multilingual_v2");
+    setElModel(localStorage.getItem("tts-el-model") || "eleven_v3");
     setElVoice(localStorage.getItem("tts-el-voice") || "");
   }, []);
 
@@ -191,9 +191,9 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
                 onChange={(e) => { setElModel(e.target.value); save("tts-el-model", e.target.value); }}
                 style={selectStyle}
               >
-                <option value="eleven_multilingual_v2">Multilingual v2</option>
-                <option value="eleven_turbo_v2_5">Turbo v2.5</option>
-                <option value="eleven_flash_v2_5">Flash v2.5</option>
+                <option value="eleven_v3">Eleven v3 (70+ 语言)</option>
+                <option value="eleven_multilingual_v2">Multilingual v2 (29 语言)</option>
+                <option value="eleven_flash_v2_5">Flash v2.5 (低延迟)</option>
               </select>
             </Field>
             <SettingsDivider />
