@@ -54,10 +54,17 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const savedModel = localStorage.getItem("tts-model") || DEFAULT_MODEL;
+    const validIds = MODELS.map((m) => m.id);
+    let savedModel = localStorage.getItem("tts-model") || DEFAULT_MODEL;
     const savedVoice = localStorage.getItem("tts-voice") || DEFAULT_VOICE;
+    // Migrate: if stored model ID is invalid, reset to default
+    if (!validIds.includes(savedModel)) {
+      savedModel = DEFAULT_MODEL;
+      localStorage.setItem("tts-model", DEFAULT_MODEL);
+      localStorage.setItem("tts-voice", DEFAULT_VOICE);
+    }
     setModel(savedModel);
-    setVoice(savedVoice);
+    setVoice(!validIds.includes(localStorage.getItem("tts-model") || "") ? DEFAULT_VOICE : savedVoice);
     // Ensure defaults are persisted
     if (!localStorage.getItem("tts-model")) localStorage.setItem("tts-model", DEFAULT_MODEL);
     if (!localStorage.getItem("tts-voice")) localStorage.setItem("tts-voice", DEFAULT_VOICE);

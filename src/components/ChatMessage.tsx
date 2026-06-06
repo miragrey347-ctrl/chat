@@ -280,8 +280,14 @@ export default function ChatMessage({
       .trim();
     if (!text) return;
 
-    const ttsModel = localStorage.getItem("tts-model") || "openai/gpt-4o-mini-tts-2025-12-15";
+    const VALID_MODELS = ["openai/gpt-4o-mini-tts-2025-12-15", "mistralai/voxtral-mini-tts-2603", "x-ai/grok-voice-tts-1.0"];
+    let ttsModel = localStorage.getItem("tts-model") || "openai/gpt-4o-mini-tts-2025-12-15";
     const ttsVoice = localStorage.getItem("tts-voice") || "nova";
+    if (!VALID_MODELS.includes(ttsModel)) {
+      ttsModel = "openai/gpt-4o-mini-tts-2025-12-15";
+      localStorage.setItem("tts-model", ttsModel);
+      localStorage.setItem("tts-voice", "nova");
+    }
 
     setTtsLoading(true);
     try {
