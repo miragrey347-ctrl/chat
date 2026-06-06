@@ -301,6 +301,10 @@ const translations: Record<string, Record<Locale, string>> = {
   "serperNote": { zh: "（推荐，serper.dev 免费 2500 次/月）", en: "(recommended, serper.dev free 2500/mo)" },
   "braveNote": { zh: "（api.search.brave.com 免费 2000 次/月）", en: "(api.search.brave.com free 2000/mo)" },
   "pullVoiceList": { zh: "从 ElevenLabs 声音库拉取列表", en: "Pull list from ElevenLabs" },
+  "ttsPreview": { zh: "试听", en: "Preview" },
+  "ttsPreviewText": { zh: "你好，这是语音预览测试。", en: "Hello, this is a voice preview test." },
+  "ttsSaved": { zh: "设置已保存", en: "Settings saved" },
+  "ttsNotConfigured": { zh: "未配置 TTS，使用浏览器默认语音", en: "TTS not configured, using browser default" },
   "enterElevenLabsKey": { zh: "输入 ElevenLabs API Key", en: "Enter ElevenLabs API Key" },
 
 };

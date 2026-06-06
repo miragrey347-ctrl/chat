@@ -1,7 +1,7 @@
 "use client";
 import { useLocale } from "@/lib/i18n";
 
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -257,30 +257,86 @@ export default function ChatMessage({
   const [editContent, setEditContent] = useState(message.content);
   const [copied, setCopied] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const handleSpeak = () => {
-    if (speaking) {
+  const handleSpeak = async () => {
+    if (speaking || ttsLoading) {
+      // Stop
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current.src = "";
+        ttsAudioRef.current = null;
+      }
       window.speechSynthesis.cancel();
       setSpeaking(false);
+      setTtsLoading(false);
       return;
     }
-    const text = message.content.replace(/```[\s\S]*?```/g, "（代码块已省略）").replace(/[#*`_~\[\]()>|]/g, "");
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "zh-CN";
-    utterance.rate = 1.0;
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    setSpeaking(true);
+
+    const text = message.content
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/[#*`_~\[\]()>|]/g, "")
+      .trim();
+    if (!text) return;
+
+    const ttsModel = localStorage.getItem("tts-model");
+    const ttsVoice = localStorage.getItem("tts-voice");
+
+    if (ttsModel && ttsVoice) {
+      // Use TTS API
+      setTtsLoading(true);
+      try {
+        const res = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, model: ttsModel, voice: ttsVoice }),
+        });
+        if (!res.ok) throw new Error("TTS failed");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        ttsAudioRef.current = audio;
+        setTtsLoading(false);
+        setSpeaking(true);
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          ttsAudioRef.current = null;
+          setSpeaking(false);
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          ttsAudioRef.current = null;
+          setSpeaking(false);
+        };
+        await audio.play();
+      } catch {
+        setTtsLoading(false);
+        setSpeaking(false);
+      }
+    } else {
+      // Fallback: browser speechSynthesis
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "zh-CN";
+      utterance.rate = 1.0;
+      utterance.onend = () => setSpeaking(false);
+      utterance.onerror = () => setSpeaking(false);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+      setSpeaking(true);
+    }
   };
 
   // Stop speech on unmount
   useEffect(() => {
     return () => {
-      if (speaking) window.speechSynthesis.cancel();
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current.src = "";
+      }
+      window.speechSynthesis.cancel();
     };
-  }, [speaking]);
+  }, []);
 
   // Display settings with safe defaults
   const ds = displaySettings || {
@@ -737,7 +793,7 @@ setTimeout(reportHeight,100);setTimeout(reportHeight,500);
       )}
 
       {/* Action bar */}
-      {!isStreaming && !editing && (showActions || copied || speaking) && (
+      {!isStreaming && !editing && (showActions || copied || speaking || ttsLoading) && (
         <div style={{
           display: "flex",
           gap: "6px",
@@ -754,7 +810,9 @@ setTimeout(reportHeight,100);setTimeout(reportHeight,500);
           />
           {!isUser && (
             <ActionBtn
-              icon={speaking ? (
+              icon={ttsLoading ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              ) : speaking ? (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
               ) : (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
