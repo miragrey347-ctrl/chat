@@ -42,8 +42,8 @@ const VOICES: Record<string, string[]> = {
   "x-ai/grok-voice-tts-1.0": ["Eve", "Ara", "Rex", "Sal", "Leo"],
 };
 
-const DEFAULT_MODEL = "openai/gpt-4o-mini-tts-2025-12-15";
-const DEFAULT_VOICE = "nova";
+const DEFAULT_MODEL = "x-ai/grok-voice-tts-1.0";
+const DEFAULT_VOICE = "Sal";
 
 export default function VoiceService({ nav }: { nav: NavContext }) {
   const { t } = useLocale();

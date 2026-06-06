@@ -281,12 +281,12 @@ export default function ChatMessage({
     if (!text) return;
 
     const VALID_MODELS = ["openai/gpt-4o-mini-tts-2025-12-15", "mistralai/voxtral-mini-tts-2603", "x-ai/grok-voice-tts-1.0"];
-    let ttsModel = localStorage.getItem("tts-model") || "openai/gpt-4o-mini-tts-2025-12-15";
-    const ttsVoice = localStorage.getItem("tts-voice") || "nova";
+    let ttsModel = localStorage.getItem("tts-model") || "x-ai/grok-voice-tts-1.0";
+    const ttsVoice = localStorage.getItem("tts-voice") || "Sal";
     if (!VALID_MODELS.includes(ttsModel)) {
-      ttsModel = "openai/gpt-4o-mini-tts-2025-12-15";
+      ttsModel = "x-ai/grok-voice-tts-1.0";
       localStorage.setItem("tts-model", ttsModel);
-      localStorage.setItem("tts-voice", "nova");
+      localStorage.setItem("tts-voice", "Sal");
     }
 
     setTtsLoading(true);
