@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent theme flash: hide until data-theme is set by init script */
+html:not([data-theme]) { visibility: hidden; }
+
 :root,
 [data-theme="dark"] {
   --bg-primary: #2b2520;
