@@ -280,50 +280,42 @@ export default function ChatMessage({
       .trim();
     if (!text) return;
 
-    const ttsModel = localStorage.getItem("tts-model");
-    const ttsVoice = localStorage.getItem("tts-voice");
+    const ttsModel = localStorage.getItem("tts-model") || "openai/gpt-4o-mini-tts-2025-12-15";
+    const ttsVoice = localStorage.getItem("tts-voice") || "nova";
 
-    if (ttsModel && ttsVoice) {
-      // Use TTS API
-      setTtsLoading(true);
-      try {
-        const res = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, model: ttsModel, voice: ttsVoice }),
-        });
-        if (!res.ok) throw new Error("TTS failed");
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        ttsAudioRef.current = audio;
-        setTtsLoading(false);
-        setSpeaking(true);
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          ttsAudioRef.current = null;
-          setSpeaking(false);
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(url);
-          ttsAudioRef.current = null;
-          setSpeaking(false);
-        };
-        await audio.play();
-      } catch {
-        setTtsLoading(false);
-        setSpeaking(false);
+    setTtsLoading(true);
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, model: ttsModel, voice: ttsVoice }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || `HTTP ${res.status}`);
       }
-    } else {
-      // Fallback: browser speechSynthesis
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "zh-CN";
-      utterance.rate = 1.0;
-      utterance.onend = () => setSpeaking(false);
-      utterance.onerror = () => setSpeaking(false);
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      const blob = await res.blob();
+      if (blob.size === 0) throw new Error("Empty audio");
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      ttsAudioRef.current = audio;
+      setTtsLoading(false);
       setSpeaking(true);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        ttsAudioRef.current = null;
+        setSpeaking(false);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        ttsAudioRef.current = null;
+        setSpeaking(false);
+      };
+      await audio.play();
+    } catch (e) {
+      console.error("TTS error:", e);
+      setTtsLoading(false);
+      setSpeaking(false);
     }
   };
 

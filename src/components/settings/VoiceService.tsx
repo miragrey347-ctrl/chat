@@ -32,39 +32,40 @@ const selectStyle: React.CSSProperties = {
 };
 
 const MODELS = [
-  { id: "openai/tts-1", label: "OpenAI TTS-1" },
-  { id: "openai/tts-1-hd", label: "OpenAI TTS-1 HD" },
-  { id: "openai/gpt-4o-mini-tts", label: "GPT-4o Mini TTS" },
-  { id: "google/gemini-2.5-flash-tts", label: "Gemini Flash TTS" },
+  { id: "openai/gpt-4o-mini-tts-2025-12-15", label: "GPT-4o Mini TTS" },
   { id: "mistralai/voxtral-mini-tts-2603", label: "Voxtral Mini TTS" },
   { id: "x-ai/grok-voice-tts-1.0", label: "Grok Voice TTS" },
 ];
 
 const VOICES: Record<string, string[]> = {
-  "openai/tts-1": ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],
-  "openai/tts-1-hd": ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],
-  "openai/gpt-4o-mini-tts": ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],
+  "openai/gpt-4o-mini-tts-2025-12-15": ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],
   "x-ai/grok-voice-tts-1.0": ["Eve", "Ara", "Rex", "Sal", "Leo"],
 };
 
+const DEFAULT_MODEL = "openai/gpt-4o-mini-tts-2025-12-15";
+const DEFAULT_VOICE = "nova";
+
 export default function VoiceService({ nav }: { nav: NavContext }) {
   const { t } = useLocale();
-  const [model, setModel] = useState("openai/tts-1");
-  const [voice, setVoice] = useState("alloy");
+  const [model, setModel] = useState(DEFAULT_MODEL);
+  const [voice, setVoice] = useState(DEFAULT_VOICE);
   const [previewing, setPreviewing] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    setModel(localStorage.getItem("tts-model") || "openai/tts-1");
-    setVoice(localStorage.getItem("tts-voice") || "alloy");
+    const savedModel = localStorage.getItem("tts-model") || DEFAULT_MODEL;
+    const savedVoice = localStorage.getItem("tts-voice") || DEFAULT_VOICE;
+    setModel(savedModel);
+    setVoice(savedVoice);
+    // Ensure defaults are persisted
+    if (!localStorage.getItem("tts-model")) localStorage.setItem("tts-model", DEFAULT_MODEL);
+    if (!localStorage.getItem("tts-voice")) localStorage.setItem("tts-voice", DEFAULT_VOICE);
   }, []);
 
   const save = (m: string, v: string) => {
     localStorage.setItem("tts-model", m);
     localStorage.setItem("tts-voice", v);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
   };
 
   const handleModelChange = (newModel: string) => {
@@ -73,11 +74,13 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
     const newVoice = voices ? voices[0] : voice;
     setVoice(newVoice);
     save(newModel, newVoice);
+    setError("");
   };
 
   const handleVoiceChange = (newVoice: string) => {
     setVoice(newVoice);
     save(model, newVoice);
+    setError("");
   };
 
   const handlePreview = async () => {
@@ -89,6 +92,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
       return;
     }
     setPreviewing(true);
+    setError("");
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
@@ -99,8 +103,12 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
           voice,
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(errBody || `HTTP ${res.status}`);
+      }
       const blob = await res.blob();
+      if (blob.size === 0) throw new Error("Empty audio response");
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audioRef.current = audio;
@@ -113,10 +121,12 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         URL.revokeObjectURL(url);
         audioRef.current = null;
         setPreviewing(false);
+        setError("Audio playback failed");
       };
       await audio.play();
-    } catch {
+    } catch (e) {
       setPreviewing(false);
+      setError(e instanceof Error ? e.message : "Unknown error");
     }
   };
 
@@ -195,12 +205,20 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         >
           {previewing ? "■ Stop" : `▶ ${t("ttsPreview")}`}
         </button>
-        {saved && (
-          <span style={{ fontSize: "13px", color: "var(--accent-color)" }}>
-            ✓ {t("ttsSaved")}
-          </span>
-        )}
       </div>
+
+      {error && (
+        <div style={{
+          padding: "12px 16px",
+          background: "rgba(220,60,60,0.1)",
+          borderRadius: "10px",
+          fontSize: "13px",
+          color: "#dc3c3c",
+          wordBreak: "break-all",
+        }}>
+          {error}
+        </div>
+      )}
     </SettingsPageLayout>
   );
 }
