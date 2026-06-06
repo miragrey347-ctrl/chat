@@ -32,14 +32,19 @@ const selectStyle: React.CSSProperties = {
 };
 
 const MODELS = [
+  { id: "x-ai/grok-voice-tts-1.0", label: "Grok Voice TTS" },
+  { id: "google/gemini-3.1-flash-tts-preview", label: "Gemini Flash TTS" },
+  { id: "microsoft/mai-voice-2", label: "MAI-Voice-2 (Microsoft)" },
+  { id: "hexgrad/kokoro-82m", label: "Kokoro 82M (多语言)" },
+  { id: "canopylabs/orpheus-tts-3b", label: "Orpheus 3B" },
   { id: "openai/gpt-4o-mini-tts-2025-12-15", label: "GPT-4o Mini TTS" },
   { id: "mistralai/voxtral-mini-tts-2603", label: "Voxtral Mini TTS" },
-  { id: "x-ai/grok-voice-tts-1.0", label: "Grok Voice TTS" },
 ];
 
 const VOICES: Record<string, string[]> = {
-  "openai/gpt-4o-mini-tts-2025-12-15": ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],
   "x-ai/grok-voice-tts-1.0": ["Eve", "Ara", "Rex", "Sal", "Leo"],
+  "openai/gpt-4o-mini-tts-2025-12-15": ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"],
+  "canopylabs/orpheus-tts-3b": ["tara", "leah", "jess", "leo", "dan", "mia", "zac"],
 };
 
 const DEFAULT_MODEL = "x-ai/grok-voice-tts-1.0";

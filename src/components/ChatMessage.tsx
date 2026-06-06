@@ -280,7 +280,7 @@ export default function ChatMessage({
       .trim();
     if (!text) return;
 
-    const VALID_MODELS = ["openai/gpt-4o-mini-tts-2025-12-15", "mistralai/voxtral-mini-tts-2603", "x-ai/grok-voice-tts-1.0"];
+    const VALID_MODELS = ["x-ai/grok-voice-tts-1.0", "google/gemini-3.1-flash-tts-preview", "microsoft/mai-voice-2", "hexgrad/kokoro-82m", "canopylabs/orpheus-tts-3b", "openai/gpt-4o-mini-tts-2025-12-15", "mistralai/voxtral-mini-tts-2603"];
     let ttsModel = localStorage.getItem("tts-model") || "x-ai/grok-voice-tts-1.0";
     const ttsVoice = localStorage.getItem("tts-voice") || "Sal";
     if (!VALID_MODELS.includes(ttsModel)) {
