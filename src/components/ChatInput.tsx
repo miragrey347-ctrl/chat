@@ -22,7 +22,8 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { t } = useLocale();
   const fileRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -59,14 +60,14 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
       return;
     }
 
-    const SpeechRecognition = (window as unknown as Record<string, unknown>).SpeechRecognition ||
-      (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
       alert("Your browser does not support speech recognition.");
       return;
     }
 
-    const recognition = new (SpeechRecognition as new () => SpeechRecognition)();
+    const recognition = new SpeechRecognitionAPI();
     recognition.lang = "zh-CN";
     recognition.continuous = false;
     recognition.interimResults = true;
@@ -74,7 +75,8 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
 
     recognition.onstart = () => setListening(true);
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
       let transcript = "";
       for (let i = 0; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
