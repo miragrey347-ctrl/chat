@@ -125,6 +125,7 @@ html, body {
 /* Streaming cursor */
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
 .streaming-cursor::after { content: "▊"; animation: blink 1s infinite; color: var(--accent); margin-left: 2px; }
 
 /* ── Responsive ── */

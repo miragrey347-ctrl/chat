@@ -43,6 +43,8 @@ export default function ChatPage() {
   const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const voiceModeRef = useRef(false);
+  const voiceContentRef = useRef("");
   const prevConvIdRef = useRef<string | null>(null);
   const imageDataRef = useRef<Record<string, string[]>>({});
   const searchSourcesRef = useRef<Record<string, Array<{ title: string; snippet: string; url: string }>>>({});
@@ -627,7 +629,8 @@ export default function ChatPage() {
   ];
 
   // Send message
-  const handleSend = async (content: string, attachments?: Attachment[]) => {
+  const handleSend = async (content: string, attachments?: Attachment[], voice?: boolean) => {
+    if (voice) voiceModeRef.current = true;
     // Auto-create conversation if none selected
     let convId = currentConvId;
     let convPromise: Promise<string | null> | null = null;
@@ -825,12 +828,53 @@ export default function ChatPage() {
 
       const { fullContent, thinkingContent, usageData, toolCalls } = await processStream(reader);
       finalizeAssistantMessage(convId!, fullContent, thinkingContent, usageData, toolCalls, searchSources);
+      // Save for voice mode auto-TTS
+      voiceContentRef.current = fullContent;
     } catch (error: unknown) {
       handleStreamError(error);
     } finally {
       setIsStreaming(false);
       abortRef.current = null;
       fetchConversations();
+      // Voice mode: auto-play TTS on AI response
+      if (voiceModeRef.current && voiceContentRef.current) {
+        voiceModeRef.current = false;
+        const text = voiceContentRef.current
+          .replace(/```[\s\S]*?```/g, "")
+          .replace(/[#*`_~\[\]()>|]/g, "")
+          .trim();
+        voiceContentRef.current = "";
+        if (text) {
+          const service = localStorage.getItem("tts-service") || "openai";
+          const apiKey = service === "openai"
+            ? localStorage.getItem("tts-oai-key")
+            : localStorage.getItem("tts-el-key");
+          if (apiKey) {
+            const ttsModel = service === "openai"
+              ? (localStorage.getItem("tts-oai-model") || "tts-1")
+              : (localStorage.getItem("tts-el-model") || "eleven_v3");
+            const voice = service === "openai"
+              ? (localStorage.getItem("tts-oai-voice") || "nova")
+              : (localStorage.getItem("tts-el-voice") || "");
+            try {
+              const res = await fetch("/api/tts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ service, apiKey, text, model: ttsModel, voice }),
+              });
+              if (res.ok) {
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                audio.onended = () => URL.revokeObjectURL(url);
+                await audio.play();
+              }
+            } catch { /* silent */ }
+          }
+        }
+      } else {
+        voiceModeRef.current = false;
+      }
     }
   };
 

@@ -1,17 +1,16 @@
 "use client";
 import { useLocale } from "@/lib/i18n";
-
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 export interface Attachment {
   type: "image" | "file";
   name: string;
-  data: string; // base64 for images, text content for files
+  data: string;
   mimeType: string;
 }
 
 interface ChatInputProps {
-  onSend: (content: string, attachments?: Attachment[]) => void;
+  onSend: (content: string, attachments?: Attachment[], voice?: boolean) => void;
   disabled?: boolean;
   enterToNewline?: boolean;
 }
@@ -19,9 +18,11 @@ interface ChatInputProps {
 export default function ChatInput({ onSend, disabled, enterToNewline = true }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [listening, setListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { t } = useLocale();
   const fileRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -51,35 +52,74 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
     handleSend();
   };
 
+  const handleVoice = useCallback(() => {
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setListening(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as unknown as Record<string, unknown>).SpeechRecognition ||
+      (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support speech recognition.");
+      return;
+    }
+
+    const recognition = new (SpeechRecognition as new () => SpeechRecognition)();
+    recognition.lang = "zh-CN";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setListening(true);
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setValue(transcript);
+
+      // Auto-send on final result
+      if (event.results[event.results.length - 1].isFinal) {
+        const text = transcript.trim();
+        if (text) {
+          onSend(text, undefined, true);
+          setValue("");
+          if (textareaRef.current) textareaRef.current.style.height = "auto";
+        }
+        setListening(false);
+      }
+    };
+
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+
+    recognition.start();
+  }, [listening, onSend]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { if (recognitionRef.current) recognitionRef.current.stop(); };
+  }, []);
+
   const handleFiles = async (files: FileList) => {
     const newAttachments: Attachment[] = [];
-
     for (const file of Array.from(files)) {
       const ext = file.name.split(".").pop()?.toLowerCase() || "";
       const isImage = file.type.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
       const isText = ["txt", "md", "json", "csv", "js", "ts", "py", "html", "css", "xml", "yaml", "yml", "log"].includes(ext);
-
       if (isImage) {
         const base64 = await fileToBase64(file);
-        newAttachments.push({
-          type: "image",
-          name: file.name,
-          data: base64,
-          mimeType: file.type || "image/jpeg",
-        });
+        newAttachments.push({ type: "image", name: file.name, data: base64, mimeType: file.type || "image/jpeg" });
       } else if (isText) {
         const text = await file.text();
-        newAttachments.push({
-          type: "file",
-          name: file.name,
-          data: text,
-          mimeType: file.type || "text/plain",
-        });
+        newAttachments.push({ type: "file", name: file.name, data: text, mimeType: file.type || "text/plain" });
       } else {
         alert(t("unsupportedFormat"));
       }
     }
-
     setAttachments((prev) => [...prev, ...newAttachments]);
   };
 
@@ -107,54 +147,19 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
         overflow: "hidden",
       }}
     >
-      {/* Attachment previews */}
       {attachments.length > 0 && (
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", padding: "12px 16px 0" }}>
           {attachments.map((att, i) => (
-            <div
-              key={i}
-              style={{
-                position: "relative",
-                borderRadius: "10px",
-                border: "1px solid var(--border-color)",
-                overflow: "hidden",
-                background: "var(--bg-tertiary)",
-              }}
-            >
+            <div key={i} style={{ position: "relative", borderRadius: "10px", border: "1px solid var(--border-color)", overflow: "hidden", background: "var(--bg-tertiary)" }}>
               {att.type === "image" ? (
-                <img
-                  src={att.data}
-                  alt={att.name}
-                  style={{ width: "80px", height: "80px", objectFit: "cover", display: "block" }}
-                />
+                <img src={att.data} alt={att.name} style={{ width: "80px", height: "80px", objectFit: "cover", display: "block" }} />
               ) : (
                 <div style={{ padding: "8px 12px", fontSize: "12px", color: "var(--text-secondary)", maxWidth: "120px" }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:"4px"}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.name}</div>
                 </div>
               )}
-              <button
-                onClick={() => removeAttachment(i)}
-                style={{
-                  position: "absolute",
-                  top: "2px",
-                  right: "2px",
-                  width: "20px",
-                  height: "20px",
-                  borderRadius: "50%",
-                  background: "rgba(0,0,0,0.6)",
-                  color: "#fff",
-                  border: "none",
-                  fontSize: "12px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  touchAction: "manipulation",
-                }}
-              >
-                ✕
-              </button>
+              <button onClick={() => removeAttachment(i)} style={{ position: "absolute", top: "2px", right: "2px", width: "20px", height: "20px", borderRadius: "50%", background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", fontSize: "12px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "manipulation" }}>✕</button>
             </div>
           ))}
         </div>
@@ -165,7 +170,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={t("sendMessage")}
+        placeholder={listening ? "🎙 Listening..." : t("sendMessage")}
         rows={1}
         disabled={disabled}
         style={{
@@ -192,65 +197,60 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
         accept="image/*,.txt,.md,.json,.csv,.js,.ts,.py,.html,.css,.xml,.yaml,.yml,.log"
         multiple
         style={{ display: "none" }}
-        onChange={(e) => {
-          if (e.target.files) handleFiles(e.target.files);
-          e.target.value = "";
-        }}
+        onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
       />
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "4px 10px 10px 10px",
-        }}
-      >
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={disabled}
-          style={{
-            background: "none",
-            border: "1.5px solid var(--text-tertiary)",
-            borderRadius: "50%",
-            width: "28px",
-            height: "28px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-tertiary)",
-            cursor: disabled ? "default" : "pointer",
-            padding: 0,
-            touchAction: "manipulation",
-            opacity: disabled ? 0.4 : 1,
-            flexShrink: 0,
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </button>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 10px 10px 10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={disabled}
+            style={{
+              background: "none", border: "1.5px solid var(--text-tertiary)", borderRadius: "50%",
+              width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center",
+              color: "var(--text-tertiary)", cursor: disabled ? "default" : "pointer", padding: 0,
+              touchAction: "manipulation", opacity: disabled ? 0.4 : 1, flexShrink: 0,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+
+          {/* Mic button */}
+          <button
+            onClick={handleVoice}
+            disabled={disabled}
+            style={{
+              background: listening ? "#e74c3c" : "none",
+              border: listening ? "1.5px solid #e74c3c" : "1.5px solid var(--text-tertiary)",
+              borderRadius: "50%",
+              width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center",
+              color: listening ? "#fff" : "var(--text-tertiary)",
+              cursor: disabled ? "default" : "pointer", padding: 0,
+              touchAction: "manipulation", opacity: disabled ? 0.4 : 1, flexShrink: 0,
+              animation: listening ? "pulse 1.5s ease infinite" : "none",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          </button>
+        </div>
+
         <button
           onClick={handleSend}
           disabled={!canSend}
           style={{
-            width: "34px",
-            height: "34px",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--accent)",
-            color: "#1a1410",
-            border: "none",
-            opacity: canSend ? 1 : 0.35,
-            cursor: canSend ? "pointer" : "default",
-            transition: "opacity 0.2s",
+            width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+            background: "var(--accent)", color: "#1a1410", border: "none",
+            opacity: canSend ? 1 : 0.35, cursor: canSend ? "pointer" : "default", transition: "opacity 0.2s",
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="19" x2="12" y2="5" />
-            <polyline points="5 12 12 5 19 12" />
+            <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
           </svg>
         </button>
       </div>
