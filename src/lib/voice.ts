@@ -33,34 +33,59 @@ export function blobToBase64(blob: Blob): Promise<string> {
 export const DEFAULT_STT_MODEL = "openai/gpt-4o-mini-transcribe";
 export const DEFAULT_OR_TTS_MODEL = "openai/gpt-4o-mini-tts-2025-12-15";
 
-// Transcribe a recorded audio blob via /api/stt (OpenRouter)
+// Transcribe a recorded audio blob via /api/stt (OpenRouter).
+// Network-layer failures (Safari "Load failed") and 5xx are retried once —
+// they're usually transient (VPN hiccup, cold start, connection reset).
 export async function transcribe(blob: Blob, format: string): Promise<string> {
   const audio = await blobToBase64(blob);
   const model = localStorage.getItem("stt-model") || DEFAULT_STT_MODEL;
   const language = localStorage.getItem("stt-language") || "";
+  const sizeKB = Math.max(1, Math.round(blob.size / 1024));
 
-  const res = await fetch("/api/stt", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      audio,
-      format,
-      model,
-      ...(language ? { language } : {}),
-    }),
-  });
-
-  if (!res.ok) {
-    let msg = `STT ${res.status}`;
+  const attempt = async (): Promise<string> => {
+    let res: Response;
     try {
-      const data = await res.json();
-      if (data.error) msg = data.error;
-    } catch { /* keep default */ }
-    throw new Error(msg);
-  }
+      res = await fetch("/api/stt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audio,
+          format,
+          model,
+          ...(language ? { language } : {}),
+        }),
+      });
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      const err = new Error(`${reason} — ${sizeKB}KB ${format}, request never reached server`);
+      (err as Error & { retryable?: boolean }).retryable = true;
+      throw err;
+    }
 
-  const data = await res.json();
-  return (data.text || "").trim();
+    if (!res.ok) {
+      let msg = `STT ${res.status}`;
+      try {
+        const data = await res.json();
+        if (data.error) msg = data.error;
+      } catch { /* keep default */ }
+      const err = new Error(msg);
+      (err as Error & { retryable?: boolean }).retryable = res.status >= 500;
+      throw err;
+    }
+
+    const data = await res.json();
+    return (data.text || "").trim();
+  };
+
+  try {
+    return await attempt();
+  } catch (e) {
+    if ((e as Error & { retryable?: boolean }).retryable) {
+      await new Promise((r) => setTimeout(r, 600));
+      return await attempt();
+    }
+    throw e;
+  }
 }
 
 export interface TTSConfig {

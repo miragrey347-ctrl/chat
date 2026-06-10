@@ -273,13 +273,26 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       return;
     }
 
+    let text = "";
     try {
-      const text = await transcribe(blob, format);
+      text = await transcribe(blob, format);
+    } catch (err) {
       if (!aliveRef.current) return;
-      if (!text) {
-        startListening();
-        return;
-      }
+      setStateBoth("idle");
+      setErrorMsg(`${t("sttFailed")}: ${err instanceof Error ? err.message : String(err)}`);
+      setTimeout(() => {
+        if (aliveRef.current) startListening();
+      }, 3000);
+      return;
+    }
+
+    if (!aliveRef.current) return;
+    if (!text) {
+      startListening();
+      return;
+    }
+
+    try {
       setUserText(text);
       setReplyText("");
       setStateBoth("thinking");
@@ -290,13 +303,14 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       await speak(reply || "");
     } catch (err) {
       if (!aliveRef.current) return;
+      setStateBoth("idle");
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setTimeout(() => {
         if (aliveRef.current) startListening();
-      }, 2500);
+      }, 3000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startListening]);
+  }, [t, startListening]);
 
   // --- TTS playback --------------------------------------------------------------
   const speak = useCallback(
