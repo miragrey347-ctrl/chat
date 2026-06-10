@@ -865,8 +865,12 @@ export default function ChatPage() {
               if (res.ok) {
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
+                // Reuse pre-unlocked audio element (iOS requires user gesture to unlock)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const audio = (window as any).__ttsAudio || new Audio();
                 audio.onended = () => URL.revokeObjectURL(url);
+                audio.src = url;
+                audio.volume = 1;
                 await audio.play();
               }
             } catch { /* silent */ }
