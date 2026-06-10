@@ -96,6 +96,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
 
       // Auto-send on final result
       if (event.results[event.results.length - 1].isFinal) {
+        recognition.stop();
         const text = transcript.trim();
         if (text) {
           onSend(text, undefined, true);
