@@ -62,13 +62,22 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
 
     // Unlock iOS audio playback during user gesture
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(window as any).__ttsAudio) {
-      const audio = new Audio();
-      audio.src = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAABhgBAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAABhgBAAAAA";
-      audio.volume = 0.01;
-      audio.play().catch(() => {});
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__ttsAudio = audio;
+    const w = window as any;
+    if (!w.__ttsAudioCtx) {
+      const AudioCtx = window.AudioContext || (w).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        ctx.resume();
+        // Play a tiny silent buffer to fully unlock
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start();
+        w.__ttsAudioCtx = ctx;
+      }
+    } else {
+      w.__ttsAudioCtx.resume();
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

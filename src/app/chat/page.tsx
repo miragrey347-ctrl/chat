@@ -863,15 +863,23 @@ export default function ChatPage() {
                 body: JSON.stringify({ service, apiKey, text, model: ttsModel, voice }),
               });
               if (res.ok) {
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                // Reuse pre-unlocked audio element (iOS requires user gesture to unlock)
+                const arrayBuffer = await res.arrayBuffer();
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const audio = (window as any).__ttsAudio || new Audio();
-                audio.onended = () => URL.revokeObjectURL(url);
-                audio.src = url;
-                audio.volume = 1;
-                await audio.play();
+                const ctx = (window as any).__ttsAudioCtx;
+                if (ctx) {
+                  const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                  const source = ctx.createBufferSource();
+                  source.buffer = audioBuffer;
+                  source.connect(ctx.destination);
+                  source.start();
+                } else {
+                  // Fallback: regular Audio
+                  const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
+                  const url = URL.createObjectURL(blob);
+                  const audio = new Audio(url);
+                  audio.onended = () => URL.revokeObjectURL(url);
+                  await audio.play();
+                }
               }
             } catch { /* silent */ }
           }
