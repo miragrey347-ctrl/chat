@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import type { Message } from "@/lib/types";
+import { getTTSConfig, stripForSpeech } from "@/lib/voice";
 import type { DisplaySettings } from "@/lib/useDisplaySettings";
 
 function CodeBlock({ children, className }: { children: string; className?: string }) {
@@ -272,19 +273,13 @@ export default function ChatMessage({
       return;
     }
 
-    const text = message.content
-      .replace(/```[\s\S]*?```/g, "")
-      .replace(/[#*`_~\[\]()>|]/g, "")
-      .trim();
+    const text = stripForSpeech(message.content);
     if (!text) return;
 
-    const service = localStorage.getItem("tts-service") || "openai";
-    const apiKey = service === "openai"
-      ? localStorage.getItem("tts-oai-key")
-      : localStorage.getItem("tts-el-key");
+    const config = getTTSConfig();
 
-    if (!apiKey) {
-      // No API key configured — fall back to browser TTS
+    if (!config) {
+      // Chosen service needs a key that isn't set — fall back to browser TTS
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "zh-CN";
       utterance.rate = 1.0;
@@ -296,12 +291,7 @@ export default function ChatMessage({
       return;
     }
 
-    const model = service === "openai"
-      ? (localStorage.getItem("tts-oai-model") || "tts-1")
-      : (localStorage.getItem("tts-el-model") || "eleven_multilingual_v2");
-    const voice = service === "openai"
-      ? (localStorage.getItem("tts-oai-voice") || "nova")
-      : (localStorage.getItem("tts-el-voice") || "");
+    const { service, apiKey, model, voice } = config;
 
     setTtsLoading(true);
     try {

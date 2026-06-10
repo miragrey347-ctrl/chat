@@ -7,6 +7,7 @@ import SettingsPageLayout, {
   SettingsDivider,
   SectionLabel,
 } from "./SettingsPageLayout";
+import { DEFAULT_OR_TTS_MODEL, DEFAULT_STT_MODEL } from "@/lib/voice";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -31,6 +32,15 @@ const selectStyle: React.CSSProperties = {
 };
 
 const OPENAI_VOICES = ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];
+const OR_VOICES = ["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"];
+
+const STT_MODELS = [
+  { value: "openai/gpt-4o-mini-transcribe", label: "GPT-4o Mini Transcribe" },
+  { value: "openai/gpt-4o-transcribe", label: "GPT-4o Transcribe" },
+  { value: "openai/whisper-1", label: "Whisper 1" },
+  { value: "openai/whisper-large-v3-turbo", label: "Whisper Large v3 Turbo (Groq)" },
+  { value: "google/chirp-3", label: "Google Chirp 3" },
+];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -45,25 +55,33 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export default function VoiceService({ nav }: { nav: NavContext }) {
   const { t } = useLocale();
-  const [service, setService] = useState("openai");
+  const [service, setService] = useState("openrouter");
+  const [orModel, setOrModel] = useState(DEFAULT_OR_TTS_MODEL);
+  const [orVoice, setOrVoice] = useState("nova");
   const [oaiKey, setOaiKey] = useState("");
   const [oaiModel, setOaiModel] = useState("tts-1");
   const [oaiVoice, setOaiVoice] = useState("nova");
   const [elKey, setElKey] = useState("");
   const [elModel, setElModel] = useState("eleven_multilingual_v2");
   const [elVoice, setElVoice] = useState("");
+  const [sttModel, setSttModel] = useState(DEFAULT_STT_MODEL);
+  const [sttLanguage, setSttLanguage] = useState("");
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    setService(localStorage.getItem("tts-service") || "openai");
+    setService(localStorage.getItem("tts-service") || "openrouter");
+    setOrModel(localStorage.getItem("tts-or-model") || DEFAULT_OR_TTS_MODEL);
+    setOrVoice(localStorage.getItem("tts-or-voice") || "nova");
     setOaiKey(localStorage.getItem("tts-oai-key") || "");
     setOaiModel(localStorage.getItem("tts-oai-model") || "tts-1");
     setOaiVoice(localStorage.getItem("tts-oai-voice") || "nova");
     setElKey(localStorage.getItem("tts-el-key") || "");
     setElModel(localStorage.getItem("tts-el-model") || "eleven_v3");
     setElVoice(localStorage.getItem("tts-el-voice") || "");
+    setSttModel(localStorage.getItem("stt-model") || DEFAULT_STT_MODEL);
+    setSttLanguage(localStorage.getItem("stt-language") || "");
   }, []);
 
   const save = (key: string, val: string) => {
@@ -78,9 +96,15 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
       setPreviewing(false);
       return;
     }
-    const key = service === "openai" ? oaiKey : elKey;
-    if (!key) { setError("请先填写 API Key"); return; }
-    if (service === "elevenlabs" && !elVoice) { setError("请填写 Voice ID"); return; }
+    if (service === "openai" && !oaiKey) { setError("请先填写 API Key"); return; }
+    if (service === "elevenlabs") {
+      if (!elKey) { setError("请先填写 API Key"); return; }
+      if (!elVoice) { setError("请填写 Voice ID"); return; }
+    }
+
+    const apiKey = service === "openai" ? oaiKey : service === "elevenlabs" ? elKey : "";
+    const model = service === "openai" ? oaiModel : service === "elevenlabs" ? elModel : orModel;
+    const voice = service === "openai" ? oaiVoice : service === "elevenlabs" ? elVoice : orVoice;
 
     setPreviewing(true);
     setError("");
@@ -90,10 +114,10 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           service,
-          apiKey: key,
+          apiKey,
           text: t("ttsPreviewText"),
-          model: service === "openai" ? oaiModel : elModel,
-          voice: service === "openai" ? oaiVoice : elVoice,
+          model,
+          voice,
         }),
       });
       if (!res.ok) {
@@ -126,11 +150,43 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
             onChange={(e) => { setService(e.target.value); save("tts-service", e.target.value); setError(""); }}
             style={selectStyle}
           >
+            <option value="openrouter">OpenRouter</option>
             <option value="openai">OpenAI TTS</option>
             <option value="elevenlabs">ElevenLabs</option>
           </select>
         </div>
       </SettingsCard>
+
+      {service === "openrouter" && (
+        <>
+          <SectionLabel>OpenRouter TTS</SectionLabel>
+          <SettingsCard>
+            <div style={{ padding: "12px 16px 0" }}>
+              <p style={{ fontSize: "12px", color: "var(--text-tertiary)", margin: 0 }}>
+                {t("orTtsHint")}
+              </p>
+            </div>
+            <Field label={t("modelLabel")}>
+              <input
+                value={orModel}
+                onChange={(e) => { setOrModel(e.target.value); save("tts-or-model", e.target.value); }}
+                placeholder={DEFAULT_OR_TTS_MODEL}
+                style={{ ...inputStyle, fontFamily: "monospace", fontSize: "13px" }}
+              />
+            </Field>
+            <SettingsDivider />
+            <Field label={t("voiceLabel")}>
+              <select
+                value={orVoice}
+                onChange={(e) => { setOrVoice(e.target.value); save("tts-or-voice", e.target.value); }}
+                style={selectStyle}
+              >
+                {OR_VOICES.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </Field>
+          </SettingsCard>
+        </>
+      )}
 
       {service === "openai" && (
         <>
@@ -231,6 +287,37 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
         </button>
       </div>
 
+      <SectionLabel>{t("sttSection")}</SectionLabel>
+      <SettingsCard>
+        <div style={{ padding: "12px 16px 0" }}>
+          <p style={{ fontSize: "12px", color: "var(--text-tertiary)", margin: 0 }}>
+            {t("sttHint")}
+          </p>
+        </div>
+        <Field label={t("modelLabel")}>
+          <select
+            value={sttModel}
+            onChange={(e) => { setSttModel(e.target.value); save("stt-model", e.target.value); }}
+            style={selectStyle}
+          >
+            {STT_MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </Field>
+        <SettingsDivider />
+        <Field label={t("sttLanguage")}>
+          <select
+            value={sttLanguage}
+            onChange={(e) => { setSttLanguage(e.target.value); save("stt-language", e.target.value); }}
+            style={selectStyle}
+          >
+            <option value="">{t("sttLangAuto")}</option>
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </Field>
+      </SettingsCard>
+
       {error && (
         <div style={{
           padding: "12px 16px",
@@ -239,6 +326,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
           fontSize: "13px",
           color: "#dc3c3c",
           wordBreak: "break-all",
+          marginTop: "8px",
         }}>
           {error}
         </div>

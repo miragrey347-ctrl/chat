@@ -4,13 +4,34 @@ export async function POST(request: Request) {
   try {
     const { service, apiKey, text, model, voice } = await request.json();
 
-    if (!service || !apiKey || !text || !voice) {
+    if (!service || !text) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    if ((service === "openai" || service === "elevenlabs") && (!apiKey || !voice)) {
+      return NextResponse.json({ error: "Missing apiKey or voice" }, { status: 400 });
     }
 
     let audioRes: Response;
 
-    if (service === "openai") {
+    if (service === "openrouter") {
+      const orKey = process.env.OPENROUTER_API_KEY;
+      if (!orKey) {
+        return NextResponse.json({ error: "OpenRouter API key not configured" }, { status: 500 });
+      }
+      audioRes = await fetch("https://openrouter.ai/api/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${orKey}`,
+        },
+        body: JSON.stringify({
+          model: model || "openai/gpt-4o-mini-tts-2025-12-15",
+          input: text,
+          voice: voice || "nova",
+          response_format: "mp3",
+        }),
+      });
+    } else if (service === "openai") {
       audioRes = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
         headers: {

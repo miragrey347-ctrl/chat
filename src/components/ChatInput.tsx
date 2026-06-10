@@ -1,6 +1,7 @@
 "use client";
 import { useLocale } from "@/lib/i18n";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { pickRecordingFormat, transcribe } from "@/lib/voice";
 
 export interface Attachment {
   type: "image" | "file";
@@ -10,20 +11,24 @@ export interface Attachment {
 }
 
 interface ChatInputProps {
-  onSend: (content: string, attachments?: Attachment[], voice?: boolean) => void;
+  onSend: (content: string, attachments?: Attachment[]) => void;
+  onOpenVoice?: () => void;
   disabled?: boolean;
   enterToNewline?: boolean;
 }
 
-export default function ChatInput({ onSend, disabled, enterToNewline = true }: ChatInputProps) {
+type DictationState = "idle" | "recording" | "transcribing";
+
+export default function ChatInput({ onSend, onOpenVoice, disabled, enterToNewline = true }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [listening, setListening] = useState(false);
+  const [dictation, setDictation] = useState<DictationState>("idle");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { t } = useLocale();
   const fileRef = useRef<HTMLInputElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -53,78 +58,82 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
     handleSend();
   };
 
-  const handleVoice = useCallback(() => {
-    if (listening && recognitionRef.current) {
-      recognitionRef.current.stop();
-      setListening(false);
+  const releaseStream = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    recorderRef.current = null;
+  };
+
+  // Whisper-based dictation: record → /api/stt → append text to input
+  const handleDictate = useCallback(async () => {
+    if (dictation === "transcribing") return;
+
+    if (dictation === "recording") {
+      const rec = recorderRef.current;
+      if (rec && rec.state !== "inactive") rec.stop();
       return;
     }
 
-    // Unlock iOS audio playback during user gesture
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any;
-    if (!w.__ttsAudioCtx) {
-      const AudioCtx = window.AudioContext || (w).webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
-        ctx.resume();
-        // Play a tiny silent buffer to fully unlock
-        const buf = ctx.createBuffer(1, 1, 22050);
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        src.start();
-        w.__ttsAudioCtx = ctx;
-      }
-    } else {
-      w.__ttsAudioCtx.resume();
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognitionAPI) {
-      alert("Your browser does not support speech recognition.");
+    if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      alert(t("voiceMicUnsupported"));
       return;
     }
 
-    const recognition = new SpeechRecognitionAPI();
-    recognition.lang = "zh-CN";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognitionRef.current = recognition;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const { mimeType, format } = pickRecordingFormat();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      chunksRef.current = [];
 
-    recognition.onstart = () => setListening(true);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onresult = (event: any) => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setValue(transcript);
+      recorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
+        chunksRef.current = [];
+        releaseStream();
 
-      // Auto-send on final result
-      if (event.results[event.results.length - 1].isFinal) {
-        recognition.stop();
-        const text = transcript.trim();
-        if (text) {
-          onSend(text, undefined, true);
-          setValue("");
-          if (textareaRef.current) textareaRef.current.style.height = "auto";
+        if (blob.size < 1500) {
+          setDictation("idle");
+          return;
         }
-        setListening(false);
-      }
-    };
 
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
+        setDictation("transcribing");
+        try {
+          const text = await transcribe(blob, format);
+          if (text) {
+            setValue((prev) => (prev.trim() ? prev.trimEnd() + " " + text : text));
+            textareaRef.current?.focus();
+          }
+        } catch (err) {
+          alert(`${t("sttFailed")}\n${err instanceof Error ? err.message : err}`);
+        } finally {
+          setDictation("idle");
+        }
+      };
 
-    recognition.start();
-  }, [listening, onSend]);
+      recorder.start();
+      recorderRef.current = recorder;
+      setDictation("recording");
+    } catch {
+      releaseStream();
+      setDictation("idle");
+      alert(t("voiceMicDenied"));
+    }
+  }, [dictation, t]);
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => { if (recognitionRef.current) recognitionRef.current.stop(); };
+    return () => {
+      const rec = recorderRef.current;
+      if (rec && rec.state !== "inactive") {
+        rec.onstop = null;
+        try { rec.stop(); } catch { /* noop */ }
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
   }, []);
 
   const handleFiles = async (files: FileList) => {
@@ -161,6 +170,11 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
 
   const canSend = (value.trim() || attachments.length > 0) && !disabled;
 
+  const placeholder =
+    dictation === "recording" ? t("dictating")
+    : dictation === "transcribing" ? t("transcribingHint")
+    : t("sendMessage");
+
   return (
     <div
       style={{
@@ -193,7 +207,7 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={listening ? "🎙 Listening..." : t("sendMessage")}
+        placeholder={placeholder}
         rows={1}
         disabled={disabled}
         style={{
@@ -240,27 +254,58 @@ export default function ChatInput({ onSend, disabled, enterToNewline = true }: C
             </svg>
           </button>
 
-          {/* Mic button */}
+          {/* Dictation button (Whisper STT) */}
           <button
-            onClick={handleVoice}
-            disabled={disabled}
+            onClick={handleDictate}
+            disabled={disabled || dictation === "transcribing"}
             style={{
-              background: listening ? "#e74c3c" : "none",
-              border: listening ? "1.5px solid #e74c3c" : "1.5px solid var(--text-tertiary)",
+              background: dictation === "recording" ? "#e74c3c" : "none",
+              border: dictation === "recording" ? "1.5px solid #e74c3c" : "1.5px solid var(--text-tertiary)",
               borderRadius: "50%",
               width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center",
-              color: listening ? "#fff" : "var(--text-tertiary)",
+              color: dictation === "recording" ? "#fff" : "var(--text-tertiary)",
               cursor: disabled ? "default" : "pointer", padding: 0,
               touchAction: "manipulation", opacity: disabled ? 0.4 : 1, flexShrink: 0,
-              animation: listening ? "pulse 1.5s ease infinite" : "none",
+              animation: dictation === "recording" ? "pulse 1.5s ease infinite" : "none",
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-            </svg>
+            {dictation === "recording" ? (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="5" y="5" width="14" height="14" rx="2" />
+              </svg>
+            ) : dictation === "transcribing" ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            )}
           </button>
+
+          {/* Voice mode button (realtime voice chat) */}
+          {onOpenVoice && (
+            <button
+              onClick={onOpenVoice}
+              disabled={disabled}
+              style={{
+                background: "none", border: "1.5px solid var(--text-tertiary)", borderRadius: "50%",
+                width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center",
+                color: "var(--text-tertiary)", cursor: disabled ? "default" : "pointer", padding: 0,
+                touchAction: "manipulation", opacity: disabled ? 0.4 : 1, flexShrink: 0,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="4" y1="10" x2="4" y2="14"/>
+                <line x1="9" y1="6" x2="9" y2="18"/>
+                <line x1="14" y1="3" x2="14" y2="21"/>
+                <line x1="19" y1="8" x2="19" y2="16"/>
+              </svg>
+            </button>
+          )}
         </div>
 
         <button
