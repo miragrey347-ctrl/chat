@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { pickRecordingFormat, transcribe, fetchTTSBlob } from "@/lib/voice";
+import { pickRecordingFormat, transcribe, fetchTTSBlob, stripForSpeech } from "@/lib/voice";
 
 // ---------------------------------------------------------------------------
 // VoiceMode: full-screen GPT-style voice conversation loop.
@@ -43,6 +43,35 @@ const SILENCE_END_MS = 1400;        // this much trailing silence ends the turn
 const MIN_SPEECH_MS = 400;          // shorter bursts are treated as noise
 const MIN_BLOB_BYTES = 2000;        // tiny recordings are discarded
 
+// --- streaming TTS sentence pipeline helpers ---------------------------------
+interface SpeechSlot {
+  buf: AudioBuffer | null; // decoded audio, null = synthesis failed (skip)
+  done: boolean;           // synthesis attempt finished
+}
+
+const SENTENCE_END_RE = /[。！？!?；;\n]|\.(?=\s|$)/g;
+
+// Index just past the next sentence boundary at/after `from`, or -1
+function nextCut(text: string, from: number): number {
+  SENTENCE_END_RE.lastIndex = from;
+  const m = SENTENCE_END_RE.exec(text);
+  return m ? m.index + m[0].length : -1;
+}
+
+// Clean streaming text for speech with prefix stability: stop before any
+// unclosed code fence / HTML comment so their content never leaks into TTS
+// mid-stream and earlier cleaned prefixes never change retroactively.
+function streamSafeClean(raw: string): string {
+  let safe = raw;
+  const fenceCount = safe.split("```").length - 1;
+  if (fenceCount % 2 === 1) safe = safe.slice(0, safe.lastIndexOf("```"));
+  const lastOpen = safe.lastIndexOf("<!--");
+  if (lastOpen !== -1 && safe.indexOf("-->", lastOpen) === -1) {
+    safe = safe.slice(0, lastOpen);
+  }
+  return stripForSpeech(safe);
+}
+
 const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode(
   { open, onClose, sendMessage, liveText },
   ref
@@ -67,6 +96,14 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const silenceStartRef = useRef(0);  // timestamp when current silence began
   const orbRef = useRef<HTMLDivElement | null>(null);
 
+  // Streaming TTS pipeline state (refs only — no re-renders per segment)
+  const turnIdRef = useRef(0);          // bumped to invalidate in-flight work
+  const segQueueRef = useRef<SpeechSlot[]>([]);
+  const playIdxRef = useRef(0);
+  const isPlayingRef = useRef(false);
+  const llmDoneRef = useRef(false);
+  const consumedRef = useRef(0);        // chars of cleaned text already enqueued
+
   // Bridge to the latest sendMessage — recorder.onstop callbacks live across
   // renders, so a direct closure would capture stale chat state (e.g. the
   // conversation id from before the first turn created it).
@@ -74,6 +111,9 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   useEffect(() => {
     sendMessageRef.current = sendMessage;
   }, [sendMessage]);
+  // Pending LLM stream from a previous turn (e.g. user skipped playback while
+  // the model was still generating) — never run two streams concurrently.
+  const pendingSendRef = useRef<Promise<unknown> | null>(null);
 
   const setStateBoth = (s: VState) => {
     stateRef.current = s;
@@ -115,12 +155,18 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     analyserRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    turnIdRef.current++;
     const src = bufferSrcRef.current;
     if (src) {
       src.onended = null;
       try { src.stop(); } catch { /* already stopped */ }
       bufferSrcRef.current = null;
     }
+    isPlayingRef.current = false;
+    segQueueRef.current = [];
+    playIdxRef.current = 0;
+    llmDoneRef.current = false;
+    consumedRef.current = 0;
     audioCtxRef.current?.suspend().catch(() => {});
     setStateBoth("idle");
   }, []);
@@ -276,12 +322,37 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       setReplyText("");
       setStateBoth("thinking");
 
-      const reply = await sendMessageRef.current(text);
-      if (!aliveRef.current) return;
+      abortSpeech(); // reset pipeline, invalidate stale segments
+      const turnId = turnIdRef.current;
+
+      // If a previous turn's stream is still finishing (skipped playback),
+      // let it settle first — page-level chat state isn't reentrant.
+      if (pendingSendRef.current) {
+        try { await pendingSendRef.current; } catch { /* previous turn's problem */ }
+        if (!aliveRef.current || turnId !== turnIdRef.current) return;
+      }
+
+      // While this await is pending, the liveText effect harvests complete
+      // sentences from the stream and feeds them into the playback queue.
+      const sendPromise = sendMessageRef.current(text);
+      pendingSendRef.current = sendPromise;
+      const reply = await sendPromise;
+      if (!aliveRef.current || turnId !== turnIdRef.current) return;
       setReplyText(reply || "");
-      await speak(reply || "");
+
+      // Flush the tail past the last harvested sentence, then let the
+      // pump's drain check decide when to go back to listening.
+      llmDoneRef.current = true;
+      const clean = streamSafeClean(reply || "");
+      if (clean.length > consumedRef.current) {
+        const tail = clean.slice(consumedRef.current).trim();
+        consumedRef.current = clean.length;
+        if (tail) enqueueSegment(tail, turnId);
+      }
+      pump(turnId);
     } catch (err) {
       if (!aliveRef.current) return;
+      abortSpeech(); // stop any half-played segments before recovery
       setStateBoth("idle");
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setTimeout(() => {
@@ -291,51 +362,129 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t, startListening]);
 
-  // --- TTS playback (Web Audio, same context as VAD) ------------------------------
-  // Using an <audio> element here would make iOS "interrupt" the shared
-  // AudioContext during playback, killing the analyser for all later turns.
-  // Decoding + BufferSource keeps everything inside one context.
-  const speak = useCallback(
-    async (text: string) => {
-      let blob: Blob | null = null;
-      try {
-        blob = await fetchTTSBlob(text);
-      } catch (err) {
-        if (!aliveRef.current) return;
-        setErrorMsg(err instanceof Error ? err.message : String(err));
-      }
-      if (!aliveRef.current) return;
-      const ctx = audioCtxRef.current;
-      if (!blob || !ctx) {
-        // Nothing to speak / TTS unconfigured — continue the loop
-        startListening();
-        return;
-      }
+  // --- streaming TTS pipeline (Web Audio, same context as VAD) ---------------------
+  // Sentences are synthesized in parallel as the LLM streams, but played
+  // strictly in order. Playing through the shared AudioContext (not an
+  // <audio> element) keeps iOS from interrupting the VAD analyser.
 
-      try {
-        setStateBoth("speaking");
-        const arrayBuf = await blob.arrayBuffer();
-        const audioBuf = await ctx.decodeAudioData(arrayBuf);
-        if (!aliveRef.current) return;
+  // Invalidate every in-flight synthesis/playback and reset the pipeline
+  const abortSpeech = useCallback(() => {
+    turnIdRef.current++;
+    const src = bufferSrcRef.current;
+    if (src) {
+      src.onended = null;
+      try { src.stop(); } catch { /* already stopped */ }
+      bufferSrcRef.current = null;
+    }
+    isPlayingRef.current = false;
+    segQueueRef.current = [];
+    playIdxRef.current = 0;
+    llmDoneRef.current = false;
+    consumedRef.current = 0;
+  }, []);
+
+  // Play the next ready slot in order; when drained and the LLM is done,
+  // hand the floor back to the user.
+  const pump = useCallback(
+    (turnId: number) => {
+      if (!aliveRef.current || turnId !== turnIdRef.current) return;
+      if (isPlayingRef.current) return;
+      const q = segQueueRef.current;
+      const i = playIdxRef.current;
+
+      if (i < q.length) {
+        if (!q[i].done) return; // synthesis still running — its callback re-pumps
+        playIdxRef.current = i + 1;
+        const buf = q[i].buf;
+        const ctx = audioCtxRef.current;
+        if (!buf || !ctx) {
+          pump(turnId); // failed segment — skip it
+          return;
+        }
+        isPlayingRef.current = true;
+        if (stateRef.current === "thinking") setStateBoth("speaking");
         ctx.resume().catch(() => {});
         const src = ctx.createBufferSource();
-        src.buffer = audioBuf;
+        src.buffer = buf;
         src.connect(ctx.destination);
         src.onended = () => {
           if (bufferSrcRef.current === src) bufferSrcRef.current = null;
-          if (aliveRef.current && stateRef.current === "speaking") {
-            startListening();
-          }
+          isPlayingRef.current = false;
+          pump(turnId);
         };
         bufferSrcRef.current = src;
         src.start();
-      } catch {
-        // Decode/playback failure — reply text is on screen, keep looping
-        if (aliveRef.current) startListening();
+        return;
+      }
+
+      if (llmDoneRef.current &&
+          (stateRef.current === "thinking" || stateRef.current === "speaking")) {
+        startListening();
       }
     },
     [startListening]
   );
+
+  // Synthesize one sentence chunk into its ordered slot
+  const enqueueSegment = useCallback(
+    (text: string, turnId: number) => {
+      const slot: SpeechSlot = { buf: null, done: false };
+      segQueueRef.current.push(slot);
+      (async () => {
+        try {
+          const blob = await fetchTTSBlob(text);
+          if (!aliveRef.current || turnId !== turnIdRef.current) {
+            slot.done = true;
+            return;
+          }
+          const ctx = audioCtxRef.current;
+          if (blob && ctx) {
+            const arr = await blob.arrayBuffer();
+            slot.buf = await ctx.decodeAudioData(arr);
+          }
+        } catch { /* failed segment: buf stays null, pump skips it */ }
+        slot.done = true;
+        if (aliveRef.current && turnId === turnIdRef.current) pump(turnId);
+      })();
+    },
+    [pump]
+  );
+
+  // Cut newly completed sentences out of the cleaned stream text.
+  // First sentence ships alone (fastest time-to-speech); afterwards all
+  // currently complete sentences merge into one chunk per harvest.
+  const harvest = useCallback(
+    (cleanText: string, turnId: number) => {
+      if (turnId !== turnIdRef.current) return;
+      if (consumedRef.current === 0) {
+        const cut = nextCut(cleanText, 0);
+        if (cut === -1) return;
+        const first = cleanText.slice(0, cut).trim();
+        consumedRef.current = cut;
+        if (first) enqueueSegment(first, turnId);
+      }
+      let probe = consumedRef.current;
+      for (;;) {
+        const cut = nextCut(cleanText, probe);
+        if (cut === -1) break;
+        probe = cut;
+      }
+      if (probe > consumedRef.current) {
+        const chunk = cleanText.slice(consumedRef.current, probe).trim();
+        consumedRef.current = probe;
+        if (chunk) enqueueSegment(chunk, turnId);
+      }
+    },
+    [enqueueSegment]
+  );
+
+  // Harvest sentences as the assistant's reply streams in
+  useEffect(() => {
+    if (!open || !aliveRef.current || llmDoneRef.current) return;
+    if (stateRef.current !== "thinking" && stateRef.current !== "speaking") return;
+    if (!liveText) return;
+    harvest(streamSafeClean(liveText), turnIdRef.current);
+  }, [liveText, open, harvest]);
 
   // --- orb tap: context-sensitive control ------------------------------------------
   const handleOrbTap = () => {
@@ -345,13 +494,9 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       silenceStartRef.current = silenceStartRef.current || performance.now();
       finishTurn();
     } else if (stateRef.current === "speaking") {
-      // Skip playback — stopping fires onended, which advances the loop
-      const src = bufferSrcRef.current;
-      if (src) {
-        try { src.stop(); } catch { /* already ended */ }
-      } else {
-        startListening();
-      }
+      // Skip the rest of the reply — invalidate all in-flight segments
+      abortSpeech();
+      startListening();
     }
   };
 
@@ -381,7 +526,9 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     vstate === "listening" ? t("voiceTapToFinish") : "";
 
   const subtitle =
-    vstate === "thinking" && liveText ? liveText : replyText;
+    (vstate === "thinking" || vstate === "speaking") && liveText
+      ? liveText
+      : replyText;
 
   return (
     <>
