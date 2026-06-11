@@ -658,12 +658,14 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
                     : "voice-stage-listening"
                 }`}
               >
-                <div className="voice-blob voice-blob-1"><i className="voice-blob-core" /></div>
-                <div className="voice-blob voice-blob-2"><i className="voice-blob-core" ref={(el) => { pillRefs.current[0] = el; }} /></div>
-                <div className="voice-blob voice-blob-3"><i className="voice-blob-core" ref={(el) => { pillRefs.current[1] = el; }} /></div>
-                <div className="voice-blob voice-blob-4"><i className="voice-blob-core" ref={(el) => { pillRefs.current[2] = el; }} /></div>
-                <div className="voice-blob voice-blob-5"><i className="voice-blob-core" ref={(el) => { pillRefs.current[3] = el; }} /></div>
-                <div className="voice-blob voice-blob-6"><i className="voice-blob-core" /></div>
+                <div className="voice-cloud-spin">
+                  <div className="voice-blob voice-blob-1"><i className="voice-blob-core" /></div>
+                  <div className="voice-blob voice-blob-2"><i className="voice-blob-core" ref={(el) => { pillRefs.current[0] = el; }} /></div>
+                  <div className="voice-blob voice-blob-3"><i className="voice-blob-core" ref={(el) => { pillRefs.current[1] = el; }} /></div>
+                  <div className="voice-blob voice-blob-4"><i className="voice-blob-core" ref={(el) => { pillRefs.current[2] = el; }} /></div>
+                  <div className="voice-blob voice-blob-5"><i className="voice-blob-core" ref={(el) => { pillRefs.current[3] = el; }} /></div>
+                  <div className="voice-blob voice-blob-6"><i className="voice-blob-core" /></div>
+                </div>
                 <div className="voice-blob voice-think-bubble"><i className="voice-blob-core" /></div>
               </div>
             </div>
