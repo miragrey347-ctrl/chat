@@ -58,6 +58,20 @@ function nextCut(text: string, from: number): number {
   return m ? m.index + m[0].length : -1;
 }
 
+// First segment can ship at a comma once enough text has accumulated —
+// trading a slightly rising intonation for ~1s earlier time-to-speech.
+const FIRST_SOFT_CUT_MIN_CHARS = 14;
+const SOFT_CUT_RE = /[，、,：:]/g;
+
+// Index just past the last comma-ish boundary, or -1
+function lastSoftCut(text: string): number {
+  SOFT_CUT_RE.lastIndex = 0;
+  let pos = -1;
+  let m: RegExpExecArray | null;
+  while ((m = SOFT_CUT_RE.exec(text))) pos = m.index + 1;
+  return pos;
+}
+
 // Clean streaming text for speech with prefix stability: stop before any
 // unclosed code fence / HTML comment so their content never leaks into TTS
 // mid-stream and earlier cleaned prefixes never change retroactively.
@@ -457,7 +471,11 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     (cleanText: string, turnId: number) => {
       if (turnId !== turnIdRef.current) return;
       if (consumedRef.current === 0) {
-        const cut = nextCut(cleanText, 0);
+        let cut = nextCut(cleanText, 0);
+        if (cut === -1) {
+          const soft = lastSoftCut(cleanText);
+          if (soft >= FIRST_SOFT_CUT_MIN_CHARS) cut = soft;
+        }
         if (cut === -1) return;
         const first = cleanText.slice(0, cut).trim();
         consumedRef.current = cut;
