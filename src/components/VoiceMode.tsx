@@ -655,7 +655,9 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
           const next = cur + (target - cur) * 0.35;
           eqLevelsRef.current[b] = next;
           const el = pillRefs.current[b];
-          if (el) el.style.transform = `scaleY(${next.toFixed(3)})`;
+          // Height, not scaleY: a fixed-width capsule grows into a true pill
+          // (straight sides, semicircle caps); scaling a circle makes ellipses.
+          if (el) el.style.height = `${(next * 100).toFixed(1)}%`;
         }
       }
       eqRafRef.current = requestAnimationFrame(tick);
@@ -665,7 +667,10 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       cancelAnimationFrame(eqRafRef.current);
       eqLevelsRef.current = [1, 1, 1, 1];
       pillRefs.current.forEach((el) => {
-        if (el) el.style.transform = "";
+        if (el) {
+          el.style.height = "";
+          el.style.transform = "";
+        }
       });
     };
   }, [vstate, squash]);
