@@ -358,6 +358,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       // pump's drain check decide when to go back to listening.
       llmDoneRef.current = true;
       const clean = streamSafeClean(reply || "");
+      harvest(clean, turnId); // cut remaining complete sentences one by one
       if (clean.length > consumedRef.current) {
         const tail = clean.slice(consumedRef.current).trim();
         consumedRef.current = clean.length;
@@ -485,16 +486,14 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
         consumedRef.current = cut;
         if (first) enqueueSegment(first, turnId);
       }
-      let probe = consumedRef.current;
+      // Every further complete sentence ships as its own segment, so
+      // subtitles and audio advance sentence by sentence.
       for (;;) {
-        const cut = nextCut(cleanText, probe);
+        const cut = nextCut(cleanText, consumedRef.current);
         if (cut === -1) break;
-        probe = cut;
-      }
-      if (probe > consumedRef.current) {
-        const chunk = cleanText.slice(consumedRef.current, probe).trim();
-        consumedRef.current = probe;
-        if (chunk) enqueueSegment(chunk, turnId);
+        const seg = cleanText.slice(consumedRef.current, cut).trim();
+        consumedRef.current = cut;
+        if (seg) enqueueSegment(seg, turnId);
       }
     },
     [enqueueSegment]
