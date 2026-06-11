@@ -43,6 +43,25 @@ const SILENCE_END_MS = 1400;        // this much trailing silence ends the turn
 const MIN_SPEECH_MS = 400;          // shorter bursts are treated as noise
 const MIN_BLOB_BYTES = 2000;        // tiny recordings are discarded
 
+// Radial float of the thinking cloud, calibrated frame-by-frame against a
+// 5x slow-motion GPT capture (2026-06-11): per-petal tip travel ≈ ±3px
+// visual at our scale (was ±9 — far too deep), period ≈ 1s real time with
+// scattered per-petal periods (GPT looks noise-driven; unequal sine periods
+// approximate that beatless organic wobble). The think bubble does NOT orbit
+// the cloud (bearing locked at ~135°, ±1.5°) but breathes radially ±5px and
+// scales ±10% on the same rhythm. Driven inside the spin rAF loop.
+// Petal amplitudes are pre-divided by each wrapper's CSS scale and
+// pre-multiplied by the outward unit vector of its CSS translate.
+// Order: blob-2..6, then think bubble (scale 1, no compensation).
+const PETAL_FLOAT = [
+  { ax: 0.84, ay: -4.93, ph: 0.0, T: 1040, sBase: 0.96, sAmp: 0.04 },  // blob-2 (7,-41)/0.60
+  { ax: 5.91, ay: -1.05, ph: 1.7, T: 920, sBase: 0.96, sAmp: 0.04 },   // blob-3 (45,-8)/0.50
+  { ax: 3.06, ay: 4.4, ph: 3.5, T: 1180, sBase: 0.96, sAmp: 0.04 },    // blob-4 (25,36)/0.56
+  { ax: -5.0, ay: 4.19, ph: 5.0, T: 1000, sBase: 0.96, sAmp: 0.04 },   // blob-5 (-31,26)/0.46
+  { ax: -5.04, ay: -2.34, ph: 0.9, T: 1310, sBase: 0.96, sAmp: 0.04 }, // blob-6 (-41,-19)/0.54
+  { ax: -3.78, ay: 3.27, ph: 2.6, T: 1120, sBase: 1.0, sAmp: 0.1 },    // think bubble (-60,52)
+];
+
 // --- streaming TTS sentence pipeline helpers ---------------------------------
 interface SpeechSlot {
   text: string;            // sentence chunk this slot speaks
@@ -118,6 +137,8 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
 
   // Audio-reactive speaking pills
   const pillRefs = useRef<(HTMLElement | null)[]>([]);
+  // Thinking-cloud petal cores (blob-2..6) for the radial float
+  const petalRefs = useRef<(HTMLElement | null)[]>([]);
   const playAnalyserRef = useRef<AnalyserNode | null>(null);
   const eqRafRef = useRef(0);
   const eqLevelsRef = useRef([1, 1, 1, 1]);
@@ -534,11 +555,28 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       if (spinRef.current) {
         spinRef.current.style.transform = `rotate(${spinAngleRef.current.toFixed(2)}deg)`;
       }
+      // Radial float, driven in the same loop (lesson: JS, never CSS, for
+      // anything that must actually run on iOS). Per-element periods kill
+      // any perceivable beat; same-phase micro-scale makes a blob shrink as
+      // it sinks and swell as it rises. Last entry is the think bubble.
+      for (let i = 0; i < PETAL_FLOAT.length; i++) {
+        const core = petalRefs.current[i];
+        if (!core) continue;
+        const p = PETAL_FLOAT[i];
+        const w = Math.sin(((now / p.T) * Math.PI * 2) + p.ph);
+        const s = p.sBase + p.sAmp * w;
+        core.style.transform = `translate(${(p.ax * w).toFixed(1)}px, ${(p.ay * w).toFixed(1)}px) scale(${s.toFixed(3)})`;
+      }
       spinRafRef.current = requestAnimationFrame(tick);
     };
     spinRafRef.current = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(spinRafRef.current);
+      // Hand the petal cores back to CSS (speaking's EQ loop or listening's
+      // breath). The 0.55s wrapper morph masks the small snap.
+      petalRefs.current.forEach((core) => {
+        if (core) core.style.transform = "";
+      });
       const node = spinRef.current;
       if (!node) return;
       let a = spinAngleRef.current % 360;
@@ -699,13 +737,13 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
               >
                 <div className="voice-cloud-spin" ref={spinRef}>
                   <div className="voice-blob voice-blob-1"><i className="voice-blob-core" /></div>
-                  <div className="voice-blob voice-blob-2"><i className="voice-blob-core" ref={(el) => { pillRefs.current[0] = el; }} /></div>
-                  <div className="voice-blob voice-blob-3"><i className="voice-blob-core" ref={(el) => { pillRefs.current[1] = el; }} /></div>
-                  <div className="voice-blob voice-blob-4"><i className="voice-blob-core" ref={(el) => { pillRefs.current[2] = el; }} /></div>
-                  <div className="voice-blob voice-blob-5"><i className="voice-blob-core" ref={(el) => { pillRefs.current[3] = el; }} /></div>
-                  <div className="voice-blob voice-blob-6"><i className="voice-blob-core" /></div>
+                  <div className="voice-blob voice-blob-2"><i className="voice-blob-core" ref={(el) => { pillRefs.current[0] = el; petalRefs.current[0] = el; }} /></div>
+                  <div className="voice-blob voice-blob-3"><i className="voice-blob-core" ref={(el) => { pillRefs.current[1] = el; petalRefs.current[1] = el; }} /></div>
+                  <div className="voice-blob voice-blob-4"><i className="voice-blob-core" ref={(el) => { pillRefs.current[2] = el; petalRefs.current[2] = el; }} /></div>
+                  <div className="voice-blob voice-blob-5"><i className="voice-blob-core" ref={(el) => { pillRefs.current[3] = el; petalRefs.current[3] = el; }} /></div>
+                  <div className="voice-blob voice-blob-6"><i className="voice-blob-core" ref={(el) => { petalRefs.current[4] = el; }} /></div>
                 </div>
-                <div className="voice-blob voice-think-bubble"><i className="voice-blob-core" /></div>
+                <div className="voice-blob voice-think-bubble"><i className="voice-blob-core" ref={(el) => { petalRefs.current[5] = el; }} /></div>
               </div>
             </div>
 

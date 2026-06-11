@@ -218,20 +218,11 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 .voice-stage-thinking .voice-blob-1 .voice-blob-core {
   animation: voiceBreath 3s ease-in-out infinite;
 }
-.voice-stage-thinking .voice-blob-2 .voice-blob-core,
-.voice-stage-thinking .voice-blob-3 .voice-blob-core,
-.voice-stage-thinking .voice-blob-4 .voice-blob-core,
-.voice-stage-thinking .voice-blob-5 .voice-blob-core,
-.voice-stage-thinking .voice-blob-6 .voice-blob-core {
-  animation: voicePetalPulse 2.4s ease-in-out infinite alternate;
-}
-.voice-stage-thinking .voice-blob-3 .voice-blob-core { animation-delay: -0.5s; }
-.voice-stage-thinking .voice-blob-4 .voice-blob-core { animation-delay: -1.1s; }
-.voice-stage-thinking .voice-blob-5 .voice-blob-core { animation-delay: -1.6s; }
-.voice-stage-thinking .voice-blob-6 .voice-blob-core { animation-delay: -2.0s; }
-.voice-stage-thinking .voice-think-bubble .voice-blob-core {
-  animation: voiceCloudDrift 2.6s ease-in-out infinite alternate;
-}
+/* Petal cores (blob-2..6) are driven inline by the spin rAF loop in
+   VoiceMode (radial float + same-phase micro-scale) — no CSS animation
+   here, it would override the inline transform. */
+/* Think-bubble core is driven by the same spin rAF loop in VoiceMode
+   (radial breath + size pulse, bearing locked — GPT's bubble never orbits). */
 
 /* --- speaking: four round beans, audio-driven scaleY set inline by JS --- */
 .voice-stage-speaking .voice-blob-1,
@@ -247,12 +238,3 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
   50% { transform: scale(1.05); }
 }
 
-@keyframes voiceCloudDrift {
-  from { transform: translateY(-3px); }
-  to { transform: translateY(3px); }
-}
-
-@keyframes voicePetalPulse {
-  from { transform: scale(0.93); }
-  to { transform: scale(1.07); }
-}
