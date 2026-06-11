@@ -593,21 +593,26 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
               style={{
                 width: "160px",
                 height: "160px",
-                borderRadius: "50%",
                 flexShrink: 0,
                 transition: "transform 0.12s ease-out",
                 willChange: "transform",
               }}
             >
               <div
-                className={
+                className={`voice-stage ${
                   vstate === "thinking" || vstate === "transcribing"
-                    ? "voice-orb voice-orb-thinking"
+                    ? "voice-stage-thinking"
                     : vstate === "speaking"
-                    ? "voice-orb voice-orb-speaking"
-                    : "voice-orb voice-orb-listening"
-                }
-              />
+                    ? "voice-stage-speaking"
+                    : "voice-stage-listening"
+                }`}
+              >
+                <div className="voice-blob voice-blob-1"><i className="voice-blob-core" /></div>
+                <div className="voice-blob voice-blob-2"><i className="voice-blob-core" /></div>
+                <div className="voice-blob voice-blob-3"><i className="voice-blob-core" /></div>
+                <div className="voice-blob voice-blob-4"><i className="voice-blob-core" /></div>
+                <div className="voice-blob voice-think-bubble"><i className="voice-blob-core" /></div>
+              </div>
             </div>
 
             {/* Subtitles */}
