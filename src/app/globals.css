@@ -204,18 +204,20 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 .voice-stage-thinking .voice-blob-4 { transform: translate(-8px, 26px) scale(0.66); }
 .voice-stage-thinking .voice-think-bubble { transform: translate(-58px, 52px) scale(1); }
 .voice-stage-thinking .voice-blob-core {
+  animation: voiceCloudOrbit 3.6s linear infinite;
+}
+.voice-stage-thinking .voice-blob-2 .voice-blob-core { animation-delay: -0.9s; }
+.voice-stage-thinking .voice-blob-3 .voice-blob-core { animation-delay: -1.8s; }
+.voice-stage-thinking .voice-blob-4 .voice-blob-core { animation-delay: -2.7s; }
+.voice-stage-thinking .voice-think-bubble .voice-blob-core {
   animation: voiceCloudDrift 2.6s ease-in-out infinite alternate;
 }
-.voice-stage-thinking .voice-blob-2 .voice-blob-core { animation-delay: 0.4s; }
-.voice-stage-thinking .voice-blob-3 .voice-blob-core { animation-delay: 0.8s; }
-.voice-stage-thinking .voice-blob-4 .voice-blob-core { animation-delay: 1.2s; }
-.voice-stage-thinking .voice-think-bubble .voice-blob-core { animation-delay: 0.6s; }
 
 /* --- speaking: four pills bouncing like an equalizer --- */
-.voice-stage-speaking .voice-blob-1 { transform: translate(-57px, 0) scale(0.3, 1); }
-.voice-stage-speaking .voice-blob-2 { transform: translate(-19px, 0) scale(0.3, 1); }
-.voice-stage-speaking .voice-blob-3 { transform: translate(19px, 0) scale(0.3, 1); }
-.voice-stage-speaking .voice-blob-4 { transform: translate(57px, 0) scale(0.3, 1); }
+.voice-stage-speaking .voice-blob-1 { transform: translate(-90px, 0) scale(0.52, 0.82); }
+.voice-stage-speaking .voice-blob-2 { transform: translate(-30px, 0) scale(0.52, 0.82); }
+.voice-stage-speaking .voice-blob-3 { transform: translate(30px, 0) scale(0.52, 0.82); }
+.voice-stage-speaking .voice-blob-4 { transform: translate(90px, 0) scale(0.52, 0.82); }
 .voice-stage-speaking .voice-think-bubble { transform: translate(0, 0) scale(0); }
 .voice-stage-speaking .voice-blob-core {
   animation: voiceTalkBounce 0.65s ease-in-out infinite alternate;
@@ -234,7 +236,14 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
   to { transform: translateY(3px); }
 }
 
+/* Circular orbit: rotate, push out, spin around the center. Equal radius +
+   staggered phases makes the blobs flow against each other — a rolling cloud. */
+@keyframes voiceCloudOrbit {
+  from { transform: rotate(0deg) translateX(9px); }
+  to { transform: rotate(360deg) translateX(9px); }
+}
+
 @keyframes voiceTalkBounce {
-  from { transform: scaleY(0.55); }
+  from { transform: scaleY(0.62); }
   to { transform: scaleY(1); }
 }
