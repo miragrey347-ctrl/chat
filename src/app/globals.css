@@ -156,9 +156,10 @@ summary { list-style: none; }
 details[open] > summary svg:last-child { transform: rotate(180deg); }
 
 /* ===== Voice mode blob orb =====
-   One element set, three choreographies. State classes re-position the same
-   five blobs; CSS transitions handle the morph between shapes. Wrapper
-   (.voice-blob) owns morph transforms, inner core owns per-state loops. */
+   Six elements, three choreographies, morphed by CSS transitions.
+   Wrapper (.voice-blob) owns morph layout; inner core owns per-state motion.
+   blob-1 = cloud body / hidden in speaking. blob-2..5 = cloud petals that
+   orbit the body while thinking, audio-driven pills while speaking. */
 .voice-stage {
   position: relative;
   width: 100%;
@@ -182,6 +183,7 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
   height: 100%;
   border-radius: 50%;
   background: var(--accent);
+  will-change: transform;
 }
 
 .voice-think-bubble {
@@ -190,41 +192,45 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
   margin: -11px 0 0 -11px;
 }
 
-/* --- listening: blobs stack into one breathing sphere --- */
+/* --- listening: everything stacked into one breathing sphere --- */
 .voice-stage-listening .voice-blob { transform: translate(0, 0) scale(1); }
 .voice-stage-listening .voice-think-bubble { transform: translate(0, 0) scale(0); }
 .voice-stage-listening .voice-blob-core {
   animation: voiceBreath 3s ease-in-out infinite;
 }
 
-/* --- thinking: cloud with a small thought bubble --- */
-.voice-stage-thinking .voice-blob-1 { transform: translate(8px, -16px) scale(0.95); }
-.voice-stage-thinking .voice-blob-2 { transform: translate(-34px, 2px) scale(0.78); }
-.voice-stage-thinking .voice-blob-3 { transform: translate(28px, 20px) scale(0.72); }
-.voice-stage-thinking .voice-blob-4 { transform: translate(-8px, 26px) scale(0.66); }
-.voice-stage-thinking .voice-think-bubble { transform: translate(-58px, 52px) scale(1); }
-.voice-stage-thinking .voice-blob-core {
-  animation: voiceCloudOrbit 3.6s linear infinite;
+/* --- thinking: body + four petals orbiting it (rolling cloud) --- */
+.voice-stage-thinking .voice-blob-1 { transform: translate(0, 0) scale(1); }
+.voice-stage-thinking .voice-blob-2,
+.voice-stage-thinking .voice-blob-3,
+.voice-stage-thinking .voice-blob-4,
+.voice-stage-thinking .voice-blob-5 { transform: translate(0, 0) scale(0.46); }
+.voice-stage-thinking .voice-think-bubble { transform: translate(-62px, 54px) scale(1); }
+
+.voice-stage-thinking .voice-blob-1 .voice-blob-core {
+  animation: voiceBreath 3s ease-in-out infinite;
 }
-.voice-stage-thinking .voice-blob-2 .voice-blob-core { animation-delay: -0.9s; }
-.voice-stage-thinking .voice-blob-3 .voice-blob-core { animation-delay: -1.8s; }
-.voice-stage-thinking .voice-blob-4 .voice-blob-core { animation-delay: -2.7s; }
+/* Petal orbit radius compensates the 0.46 wrapper scale: 108 * 0.46 ~ 50px */
+.voice-stage-thinking .voice-blob-2 .voice-blob-core,
+.voice-stage-thinking .voice-blob-3 .voice-blob-core,
+.voice-stage-thinking .voice-blob-4 .voice-blob-core,
+.voice-stage-thinking .voice-blob-5 .voice-blob-core {
+  animation: voicePetalOrbit 4.5s linear infinite;
+}
+.voice-stage-thinking .voice-blob-3 .voice-blob-core { animation-delay: -1.125s; }
+.voice-stage-thinking .voice-blob-4 .voice-blob-core { animation-delay: -2.25s; }
+.voice-stage-thinking .voice-blob-5 .voice-blob-core { animation-delay: -3.375s; }
 .voice-stage-thinking .voice-think-bubble .voice-blob-core {
   animation: voiceCloudDrift 2.6s ease-in-out infinite alternate;
 }
 
-/* --- speaking: four pills bouncing like an equalizer --- */
-.voice-stage-speaking .voice-blob-1 { transform: translate(-90px, 0) scale(0.52, 0.82); }
-.voice-stage-speaking .voice-blob-2 { transform: translate(-30px, 0) scale(0.52, 0.82); }
-.voice-stage-speaking .voice-blob-3 { transform: translate(30px, 0) scale(0.52, 0.82); }
-.voice-stage-speaking .voice-blob-4 { transform: translate(90px, 0) scale(0.52, 0.82); }
+/* --- speaking: four round beans, audio-driven scaleY set inline by JS --- */
+.voice-stage-speaking .voice-blob-1 { transform: translate(0, 0) scale(0); }
+.voice-stage-speaking .voice-blob-2 { transform: translate(-78px, 0) scale(0.42); }
+.voice-stage-speaking .voice-blob-3 { transform: translate(-26px, 0) scale(0.42); }
+.voice-stage-speaking .voice-blob-4 { transform: translate(26px, 0) scale(0.42); }
+.voice-stage-speaking .voice-blob-5 { transform: translate(78px, 0) scale(0.42); }
 .voice-stage-speaking .voice-think-bubble { transform: translate(0, 0) scale(0); }
-.voice-stage-speaking .voice-blob-core {
-  animation: voiceTalkBounce 0.65s ease-in-out infinite alternate;
-}
-.voice-stage-speaking .voice-blob-2 .voice-blob-core { animation-delay: 0.18s; }
-.voice-stage-speaking .voice-blob-3 .voice-blob-core { animation-delay: 0.09s; }
-.voice-stage-speaking .voice-blob-4 .voice-blob-core { animation-delay: 0.27s; }
 
 @keyframes voiceBreath {
   0%, 100% { transform: scale(1); }
@@ -236,14 +242,7 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
   to { transform: translateY(3px); }
 }
 
-/* Circular orbit: rotate, push out, spin around the center. Equal radius +
-   staggered phases makes the blobs flow against each other — a rolling cloud. */
-@keyframes voiceCloudOrbit {
-  from { transform: rotate(0deg) translateX(9px); }
-  to { transform: rotate(360deg) translateX(9px); }
-}
-
-@keyframes voiceTalkBounce {
-  from { transform: scaleY(0.62); }
-  to { transform: scaleY(1); }
+@keyframes voicePetalOrbit {
+  from { transform: rotate(0deg) translateX(108px); }
+  to { transform: rotate(360deg) translateX(108px); }
 }

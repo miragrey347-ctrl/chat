@@ -111,6 +111,12 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const silenceStartRef = useRef(0);  // timestamp when current silence began
   const orbRef = useRef<HTMLDivElement | null>(null);
 
+  // Audio-reactive speaking pills
+  const pillRefs = useRef<(HTMLElement | null)[]>([]);
+  const playAnalyserRef = useRef<AnalyserNode | null>(null);
+  const eqRafRef = useRef(0);
+  const eqLevelsRef = useRef([1, 1, 1, 1]);
+
   // Streaming TTS pipeline state (refs only — no re-renders per segment)
   const turnIdRef = useRef(0);          // bumped to invalidate in-flight work
   const segQueueRef = useRef<SpeechSlot[]>([]);
@@ -425,7 +431,15 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
         ctx.resume().catch(() => {});
         const src = ctx.createBufferSource();
         src.buffer = buf;
-        src.connect(ctx.destination);
+        let analyser = playAnalyserRef.current;
+        if (!analyser || analyser.context !== ctx) {
+          analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.5;
+          analyser.connect(ctx.destination);
+          playAnalyserRef.current = analyser;
+        }
+        src.connect(analyser);
         src.onended = () => {
           if (bufferSrcRef.current === src) bufferSrcRef.current = null;
           isPlayingRef.current = false;
@@ -498,6 +512,43 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     },
     [enqueueSegment]
   );
+
+  // Audio-reactive pills: four frequency bands of the TTS output drive the
+  // four beans' heights while speaking (round at rest, stretched when loud).
+  useEffect(() => {
+    if (vstate !== "speaking") return;
+    const analyser = playAnalyserRef.current;
+    const freq = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
+    // ~187Hz per bin at 48kHz/fftSize 256; bands cover the voice range
+    const bands: [number, number][] = [[1, 4], [5, 9], [10, 16], [17, 26]];
+    const tick = () => {
+      if (stateRef.current !== "speaking") return;
+      if (analyser && freq) {
+        analyser.getByteFrequencyData(freq);
+        for (let b = 0; b < 4; b++) {
+          const [s, e] = bands[b];
+          let sum = 0;
+          for (let i = s; i <= e; i++) sum += freq[i];
+          const level = sum / (e - s + 1) / 255;
+          const target = 1 + Math.min(level * 1.6, 1.2);
+          const cur = eqLevelsRef.current[b];
+          const next = cur + (target - cur) * 0.35;
+          eqLevelsRef.current[b] = next;
+          const el = pillRefs.current[b];
+          if (el) el.style.transform = `scaleY(${next.toFixed(3)})`;
+        }
+      }
+      eqRafRef.current = requestAnimationFrame(tick);
+    };
+    eqRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(eqRafRef.current);
+      eqLevelsRef.current = [1, 1, 1, 1];
+      pillRefs.current.forEach((el) => {
+        if (el) el.style.transform = "";
+      });
+    };
+  }, [vstate]);
 
   // Harvest sentences as the assistant's reply streams in
   useEffect(() => {
@@ -608,9 +659,10 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
                 }`}
               >
                 <div className="voice-blob voice-blob-1"><i className="voice-blob-core" /></div>
-                <div className="voice-blob voice-blob-2"><i className="voice-blob-core" /></div>
-                <div className="voice-blob voice-blob-3"><i className="voice-blob-core" /></div>
-                <div className="voice-blob voice-blob-4"><i className="voice-blob-core" /></div>
+                <div className="voice-blob voice-blob-2"><i className="voice-blob-core" ref={(el) => { pillRefs.current[0] = el; }} /></div>
+                <div className="voice-blob voice-blob-3"><i className="voice-blob-core" ref={(el) => { pillRefs.current[1] = el; }} /></div>
+                <div className="voice-blob voice-blob-4"><i className="voice-blob-core" ref={(el) => { pillRefs.current[2] = el; }} /></div>
+                <div className="voice-blob voice-blob-5"><i className="voice-blob-core" ref={(el) => { pillRefs.current[3] = el; }} /></div>
                 <div className="voice-blob voice-think-bubble"><i className="voice-blob-core" /></div>
               </div>
             </div>
