@@ -200,7 +200,9 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 
 /* --- listening: everything stacked into one breathing sphere --- */
 .voice-stage-listening .voice-blob { transform: translate(0, 0) scale(1); }
-.voice-stage-listening .voice-think-bubble { transform: translate(0, 0) scale(0); }
+/* Bubble hides inside the sphere so entering thinking "births" it out of
+   the body edge, and leaving thinking sucks it back in (GPT reference). */
+.voice-stage-listening .voice-think-bubble { transform: translate(-18px, 16px) scale(0.45); }
 .voice-stage-listening .voice-blob-core {
   animation: voiceBreath 3s ease-in-out infinite;
 }
@@ -224,7 +226,27 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 /* Think-bubble core is driven by the same spin rAF loop in VoiceMode
    (radial breath + size pulse, bearing locked — GPT's bubble never orbits). */
 
+/* --- squash: brief mid-state of the thinking→speaking morph; the whole
+   cloud flattens into a lumpy horizontal bar before splitting into the
+   beans (from the GPT reference gif). Driven by VoiceMode for 220ms. --- */
+.voice-stage-squash .voice-blob {
+  transition-duration: 0.22s;
+  transition-timing-function: cubic-bezier(0.25, 0.6, 0.5, 1);
+}
+.voice-stage-squash .voice-blob-1 { transform: translate(0, 0) scale(1.8, 0.45); }
+.voice-stage-squash .voice-blob-2 { transform: translate(-70px, 0) scale(0.52, 0.5); }
+.voice-stage-squash .voice-blob-3 { transform: translate(-35px, 0) scale(0.52, 0.5); }
+.voice-stage-squash .voice-blob-4 { transform: translate(35px, 0) scale(0.52, 0.5); }
+.voice-stage-squash .voice-blob-5 { transform: translate(70px, 0) scale(0.52, 0.5); }
+.voice-stage-squash .voice-blob-6 { transform: translate(0, 0) scale(0.52, 0.5); }
+.voice-stage-squash .voice-blob-1 .voice-blob-core { animation: none; }
+.voice-stage-squash .voice-think-bubble {
+  transform: translate(-44px, 38px) scale(0);
+  transition-duration: 0.15s;
+}
+
 /* --- speaking: four round beans, audio-driven scaleY set inline by JS --- */
+.voice-stage-speaking .voice-blob { transition-duration: 0.32s; }
 .voice-stage-speaking .voice-blob-1,
 .voice-stage-speaking .voice-blob-6 { transform: translate(0, 0) scale(0); }
 .voice-stage-speaking .voice-blob-2 { transform: translate(-78px, 0) scale(0.42); }

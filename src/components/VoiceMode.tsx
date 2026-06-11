@@ -134,6 +134,8 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const spinRef = useRef<HTMLDivElement | null>(null);
   const spinAngleRef = useRef(0);
   const spinRafRef = useRef(0);
+  const spinExitAngleRef = useRef(0); // angle at the moment thinking ended
+  const squashRef = useRef(false);    // sync mirror of the squash mid-state
 
   // Audio-reactive speaking pills
   const pillRefs = useRef<(HTMLElement | null)[]>([]);
@@ -581,6 +583,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       if (!node) return;
       let a = spinAngleRef.current % 360;
       if (a < -180) a += 360;
+      spinExitAngleRef.current = a;
       node.style.transition = "none";
       node.style.transform = `rotate(${a.toFixed(2)}deg)`;
       void node.offsetWidth; // commit the equivalent angle without transition
@@ -590,10 +593,50 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     };
   }, [vstate]);
 
+  // Squash mid-state of the thinking→speaking morph (from the GPT reference
+  // gif): the whole cloud flattens into a lumpy horizontal bar, then the bar
+  // splits into the four beans. The spin angle is snapped to the nearest
+  // multiple of 72° first — the petal layout is close to 5-fold symmetric,
+  // so the jump hides inside the collapse — leaving ≤ ±36° to unwind in
+  // step with the squash, which keeps the bar and the split horizontal.
+  const [squash, setSquash] = useState(false);
+  const prevVstateRef = useRef(vstate);
+  useEffect(() => {
+    const prev = prevVstateRef.current;
+    prevVstateRef.current = vstate;
+    if (vstate !== "speaking" || (prev !== "thinking" && prev !== "transcribing")) {
+      squashRef.current = false;
+      setSquash(false);
+      return;
+    }
+    squashRef.current = true;
+    setSquash(true);
+    const node = spinRef.current;
+    if (node) {
+      let a = spinExitAngleRef.current;
+      a -= Math.round(a / 72) * 72;
+      node.style.transition = "none";
+      node.style.transform = `rotate(${a.toFixed(2)}deg)`;
+      void node.offsetWidth;
+      node.style.transition = "transform 0.22s cubic-bezier(0.25, 0.6, 0.5, 1)";
+      node.style.transform = "rotate(0deg)";
+      spinAngleRef.current = 0;
+    }
+    const id = setTimeout(() => {
+      squashRef.current = false;
+      setSquash(false);
+    }, 220);
+    return () => {
+      clearTimeout(id);
+      squashRef.current = false;
+      setSquash(false);
+    };
+  }, [vstate]);
+
   // Audio-reactive pills: four frequency bands of the TTS output drive the
   // four beans' heights while speaking (round at rest, stretched when loud).
   useEffect(() => {
-    if (vstate !== "speaking") return;
+    if (vstate !== "speaking" || squashRef.current) return;
     const analyser = playAnalyserRef.current;
     const freq = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
     // ~187Hz per bin at 48kHz/fftSize 256; bands cover the voice range
@@ -625,7 +668,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
         if (el) el.style.transform = "";
       });
     };
-  }, [vstate]);
+  }, [vstate, squash]);
 
   // Harvest sentences as the assistant's reply streams in
   useEffect(() => {
@@ -728,7 +771,9 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
             >
               <div
                 className={`voice-stage ${
-                  vstate === "thinking" || vstate === "transcribing"
+                  squash
+                    ? "voice-stage-squash"
+                    : vstate === "thinking" || vstate === "transcribing"
                     ? "voice-stage-thinking"
                     : vstate === "speaking"
                     ? "voice-stage-speaking"
