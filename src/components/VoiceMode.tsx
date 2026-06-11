@@ -111,6 +111,11 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const silenceStartRef = useRef(0);  // timestamp when current silence began
   const orbRef = useRef<HTMLDivElement | null>(null);
 
+  // JS-driven cloud spin (CSS animation on the spin group silently fails on iOS)
+  const spinRef = useRef<HTMLDivElement | null>(null);
+  const spinAngleRef = useRef(0);
+  const spinRafRef = useRef(0);
+
   // Audio-reactive speaking pills
   const pillRefs = useRef<(HTMLElement | null)[]>([]);
   const playAnalyserRef = useRef<AnalyserNode | null>(null);
@@ -513,6 +518,40 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     [enqueueSegment]
   );
 
+  // Rigid cloud spin while thinking: ~45deg/s ccw (8s per revolution).
+  // On exit, snap to the nearest equivalent angle (visually identical) and
+  // transition back to 0 in step with the morph so beans never sit crooked.
+  useEffect(() => {
+    const spinning = vstate === "thinking" || vstate === "transcribing";
+    const el = spinRef.current;
+    if (!spinning || !el) return;
+    el.style.transition = "none";
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      spinAngleRef.current -= dt * 45;
+      if (spinRef.current) {
+        spinRef.current.style.transform = `rotate(${spinAngleRef.current.toFixed(2)}deg)`;
+      }
+      spinRafRef.current = requestAnimationFrame(tick);
+    };
+    spinRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(spinRafRef.current);
+      const node = spinRef.current;
+      if (!node) return;
+      let a = spinAngleRef.current % 360;
+      if (a < -180) a += 360;
+      node.style.transition = "none";
+      node.style.transform = `rotate(${a.toFixed(2)}deg)`;
+      void node.offsetWidth; // commit the equivalent angle without transition
+      node.style.transition = "transform 0.55s cubic-bezier(0.34, 1.3, 0.64, 1)";
+      node.style.transform = "rotate(0deg)";
+      spinAngleRef.current = 0;
+    };
+  }, [vstate]);
+
   // Audio-reactive pills: four frequency bands of the TTS output drive the
   // four beans' heights while speaking (round at rest, stretched when loud).
   useEffect(() => {
@@ -658,7 +697,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
                     : "voice-stage-listening"
                 }`}
               >
-                <div className="voice-cloud-spin">
+                <div className="voice-cloud-spin" ref={spinRef}>
                   <div className="voice-blob voice-blob-1"><i className="voice-blob-core" /></div>
                   <div className="voice-blob voice-blob-2"><i className="voice-blob-core" ref={(el) => { pillRefs.current[0] = el; }} /></div>
                   <div className="voice-blob voice-blob-3"><i className="voice-blob-core" ref={(el) => { pillRefs.current[1] = el; }} /></div>

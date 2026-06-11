@@ -205,10 +205,8 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
   animation: voiceBreath 3s ease-in-out infinite;
 }
 
-/* --- thinking: asymmetric cauliflower, whole group slowly spinning --- */
-.voice-stage-thinking .voice-cloud-spin {
-  animation: voiceCloudSpin 8s linear infinite;
-}
+/* --- thinking: asymmetric cauliflower; spin driven by JS (rAF) because
+   iOS Safari silently refuses to run this particular CSS animation --- */
 .voice-stage-thinking .voice-blob-1 { transform: translate(0, 0) scale(0.88); }
 .voice-stage-thinking .voice-blob-2 { transform: translate(7px, -41px) scale(0.60); }
 .voice-stage-thinking .voice-blob-3 { transform: translate(45px, -8px) scale(0.50); }
@@ -252,11 +250,6 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 @keyframes voiceCloudDrift {
   from { transform: translateY(-3px); }
   to { transform: translateY(3px); }
-}
-
-@keyframes voiceCloudSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
 }
 
 @keyframes voicePetalPulse {
