@@ -200,32 +200,37 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 }
 
 /* --- thinking: body + four petals orbiting it (rolling cloud) --- */
-.voice-stage-thinking .voice-blob-1 { transform: translate(0, 0) scale(1); }
+.voice-stage-thinking .voice-blob-1 { transform: translate(0, 0) scale(0.88); }
 .voice-stage-thinking .voice-blob-2,
 .voice-stage-thinking .voice-blob-3,
 .voice-stage-thinking .voice-blob-4,
-.voice-stage-thinking .voice-blob-5 { transform: translate(0, 0) scale(0.46); }
-.voice-stage-thinking .voice-think-bubble { transform: translate(-62px, 54px) scale(1); }
+.voice-stage-thinking .voice-blob-5,
+.voice-stage-thinking .voice-blob-6 { transform: translate(0, 0) scale(0.56); }
+.voice-stage-thinking .voice-think-bubble { transform: translate(-60px, 52px) scale(1); }
 
 .voice-stage-thinking .voice-blob-1 .voice-blob-core {
   animation: voiceBreath 3s ease-in-out infinite;
 }
-/* Petal orbit radius compensates the 0.46 wrapper scale: 108 * 0.46 ~ 50px */
+/* Five petals on a 44px visual orbit (79 * 0.56), 72deg apart, overlapping
+   each other into a cauliflower outline that visibly spins */
 .voice-stage-thinking .voice-blob-2 .voice-blob-core,
 .voice-stage-thinking .voice-blob-3 .voice-blob-core,
 .voice-stage-thinking .voice-blob-4 .voice-blob-core,
-.voice-stage-thinking .voice-blob-5 .voice-blob-core {
+.voice-stage-thinking .voice-blob-5 .voice-blob-core,
+.voice-stage-thinking .voice-blob-6 .voice-blob-core {
   animation: voicePetalOrbit 4.5s linear infinite;
 }
-.voice-stage-thinking .voice-blob-3 .voice-blob-core { animation-delay: -1.125s; }
-.voice-stage-thinking .voice-blob-4 .voice-blob-core { animation-delay: -2.25s; }
-.voice-stage-thinking .voice-blob-5 .voice-blob-core { animation-delay: -3.375s; }
+.voice-stage-thinking .voice-blob-3 .voice-blob-core { animation-delay: -0.9s; }
+.voice-stage-thinking .voice-blob-4 .voice-blob-core { animation-delay: -1.8s; }
+.voice-stage-thinking .voice-blob-5 .voice-blob-core { animation-delay: -2.7s; }
+.voice-stage-thinking .voice-blob-6 .voice-blob-core { animation-delay: -3.6s; }
 .voice-stage-thinking .voice-think-bubble .voice-blob-core {
   animation: voiceCloudDrift 2.6s ease-in-out infinite alternate;
 }
 
 /* --- speaking: four round beans, audio-driven scaleY set inline by JS --- */
-.voice-stage-speaking .voice-blob-1 { transform: translate(0, 0) scale(0); }
+.voice-stage-speaking .voice-blob-1,
+.voice-stage-speaking .voice-blob-6 { transform: translate(0, 0) scale(0); }
 .voice-stage-speaking .voice-blob-2 { transform: translate(-78px, 0) scale(0.42); }
 .voice-stage-speaking .voice-blob-3 { transform: translate(-26px, 0) scale(0.42); }
 .voice-stage-speaking .voice-blob-4 { transform: translate(26px, 0) scale(0.42); }
@@ -243,6 +248,6 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 }
 
 @keyframes voicePetalOrbit {
-  from { transform: rotate(0deg) translateX(108px); }
-  to { transform: rotate(360deg) translateX(108px); }
+  from { transform: rotate(0deg) translateX(79px); }
+  to { transform: rotate(360deg) translateX(79px); }
 }
