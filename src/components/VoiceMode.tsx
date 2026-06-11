@@ -147,6 +147,8 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
 
   // Streaming TTS pipeline state (refs only — no re-renders per segment)
   const turnIdRef = useRef(0);          // bumped to invalidate in-flight work
+  const ttsInFlightRef = useRef(0);     // concurrent synthesis gate ...
+  const ttsWaitersRef = useRef<(() => void)[]>([]); // ... and its queue
   const segQueueRef = useRef<SpeechSlot[]>([]);
   const playIdxRef = useRef(0);
   const isPlayingRef = useRef(false);
@@ -226,6 +228,14 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     const analyser = analyserRef.current;
     if (!analyser) return;
 
+    // Watchdog: iOS can interrupt the shared context at any time (calls,
+    // Siri, notification sounds). A non-running context feeds the analyser
+    // a flat silence line and VAD dies quietly — nudge it back every frame.
+    const ctx = audioCtxRef.current;
+    if (ctx && ctx.state !== "running") {
+      ctx.resume().catch(() => { /* keep trying next frame */ });
+    }
+
     const data = new Uint8Array(analyser.fftSize);
     analyser.getByteTimeDomainData(data);
     let sum = 0;
@@ -295,7 +305,39 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
           analyserRef.current = analyser;
         }
       } else {
-        audioCtxRef.current?.resume().catch(() => {});
+        // Reusing the existing graph: make sure the context actually runs.
+        // On iOS resume() can hang or fail after an interruption, so wait
+        // with a timeout, and rebuild the whole graph as a last resort
+        // (the mic stream itself survives interruptions).
+        const ctx = audioCtxRef.current;
+        if (ctx && ctx.state !== "running") {
+          try {
+            await Promise.race([
+              ctx.resume(),
+              new Promise((res) => setTimeout(res, 800)),
+            ]);
+          } catch { /* rebuild below */ }
+        }
+        if (ctx && (ctx.state as string) !== "running" && streamRef.current) {
+          try { await ctx.close(); } catch { /* noop */ }
+          audioCtxRef.current = null;
+          playAnalyserRef.current = null; // pump re-creates it on the new ctx
+          const Ctx =
+            window.AudioContext ||
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (window as any).webkitAudioContext;
+          if (Ctx) {
+            const fresh = new Ctx();
+            audioCtxRef.current = fresh;
+            fresh.resume().catch(() => {});
+            try { sourceRef.current?.disconnect(); } catch { /* noop */ }
+            sourceRef.current = fresh.createMediaStreamSource(streamRef.current);
+            const analyser = fresh.createAnalyser();
+            analyser.fftSize = 512;
+            sourceRef.current.connect(analyser);
+            analyserRef.current = analyser;
+          }
+        }
       }
 
       const { mimeType } = pickRecordingFormat();
@@ -419,6 +461,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   // Invalidate every in-flight synthesis/playback and reset the pipeline
   const abortSpeech = useCallback(() => {
     turnIdRef.current++;
+    ttsWaitersRef.current.splice(0).forEach((wake) => wake());
     const src = bufferSrcRef.current;
     if (src) {
       src.onended = null;
@@ -468,7 +511,18 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
           playAnalyserRef.current = analyser;
         }
         src.connect(analyser);
+        // Watchdog: on a frozen (iOS-interrupted) context onended never
+        // fires, which would deadlock the pipeline mid-reply.
+        const watchdog = setTimeout(() => {
+          if (bufferSrcRef.current !== src) return;
+          src.onended = null;
+          try { src.stop(); } catch { /* already stopped */ }
+          bufferSrcRef.current = null;
+          isPlayingRef.current = false;
+          pump(turnId);
+        }, buf.duration * 1000 + 1500);
         src.onended = () => {
+          clearTimeout(watchdog);
           if (bufferSrcRef.current === src) bufferSrcRef.current = null;
           isPlayingRef.current = false;
           pump(turnId);
@@ -486,14 +540,35 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     [startListening]
   );
 
-  // Synthesize one sentence chunk into its ordered slot
+  // Synthesize one sentence chunk into its ordered slot.
+  // At most 3 syntheses run concurrently — a long reply harvests many
+  // sentences at once, and firing them all in parallel rate-limits the TTS
+  // endpoint, which used to silently mute the trailing segments. Each
+  // segment also gets one retry before giving up.
   const enqueueSegment = useCallback(
     (text: string, turnId: number) => {
       const slot: SpeechSlot = { text, buf: null, done: false };
       segQueueRef.current.push(slot);
       (async () => {
+        while (ttsInFlightRef.current >= 3) {
+          await new Promise<void>((res) => ttsWaitersRef.current.push(res));
+        }
+        if (!aliveRef.current || turnId !== turnIdRef.current) {
+          slot.done = true;
+          return;
+        }
+        ttsInFlightRef.current++;
         try {
-          const blob = await fetchTTSBlob(text);
+          let blob: Blob | null = null;
+          try {
+            blob = await fetchTTSBlob(text);
+          } catch { /* retried below */ }
+          if (!blob && aliveRef.current && turnId === turnIdRef.current) {
+            await new Promise((res) => setTimeout(res, 400));
+            try {
+              blob = await fetchTTSBlob(text);
+            } catch { /* failed twice: buf stays null, pump skips it */ }
+          }
           if (!aliveRef.current || turnId !== turnIdRef.current) {
             slot.done = true;
             return;
@@ -504,6 +579,10 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
             slot.buf = await ctx.decodeAudioData(arr);
           }
         } catch { /* failed segment: buf stays null, pump skips it */ }
+        finally {
+          ttsInFlightRef.current--;
+          ttsWaitersRef.current.shift()?.();
+        }
         slot.done = true;
         if (aliveRef.current && turnId === turnIdRef.current) pump(turnId);
       })();
