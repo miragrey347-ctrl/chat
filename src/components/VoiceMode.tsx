@@ -45,6 +45,7 @@ const MIN_BLOB_BYTES = 2000;        // tiny recordings are discarded
 
 // --- streaming TTS sentence pipeline helpers ---------------------------------
 interface SpeechSlot {
+  text: string;            // sentence chunk this slot speaks
   buf: AudioBuffer | null; // decoded audio, null = synthesis failed (skip)
   done: boolean;           // synthesis attempt finished
 }
@@ -93,7 +94,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const { t } = useLocale();
   const [vstate, setVState] = useState<VState>("idle");
   const [userText, setUserText] = useState("");
-  const [replyText, setReplyText] = useState("");
+  const [spokenText, setSpokenText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   const stateRef = useRef<VState>("idle");
@@ -333,7 +334,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
 
     try {
       setUserText(text);
-      setReplyText("");
+      setSpokenText("");
       setStateBoth("thinking");
 
       abortSpeech(); // reset pipeline, invalidate stale segments
@@ -352,7 +353,6 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       pendingSendRef.current = sendPromise;
       const reply = await sendPromise;
       if (!aliveRef.current || turnId !== turnIdRef.current) return;
-      setReplyText(reply || "");
 
       // Flush the tail past the last harvested sentence, then let the
       // pump's drain check decide when to go back to listening.
@@ -409,10 +409,14 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       if (i < q.length) {
         if (!q[i].done) return; // synthesis still running — its callback re-pumps
         playIdxRef.current = i + 1;
+        const slotText = q[i].text;
+        if (slotText) {
+          setSpokenText((prev) => (prev ? prev + " " + slotText : slotText));
+        }
         const buf = q[i].buf;
         const ctx = audioCtxRef.current;
         if (!buf || !ctx) {
-          pump(turnId); // failed segment — skip it
+          pump(turnId); // failed segment — text shown, audio skipped
           return;
         }
         isPlayingRef.current = true;
@@ -442,7 +446,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   // Synthesize one sentence chunk into its ordered slot
   const enqueueSegment = useCallback(
     (text: string, turnId: number) => {
-      const slot: SpeechSlot = { buf: null, done: false };
+      const slot: SpeechSlot = { text, buf: null, done: false };
       segQueueRef.current.push(slot);
       (async () => {
         try {
@@ -523,7 +527,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     if (open) {
       aliveRef.current = true;
       setUserText("");
-      setReplyText("");
+      setSpokenText("");
       setErrorMsg("");
       startListening();
     } else {
@@ -543,10 +547,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const hintText =
     vstate === "listening" ? t("voiceTapToFinish") : "";
 
-  const subtitle =
-    (vstate === "thinking" || vstate === "speaking") && liveText
-      ? liveText
-      : replyText;
+  const subtitle = spokenText;
 
   return (
     <>
