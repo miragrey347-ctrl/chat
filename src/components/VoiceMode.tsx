@@ -43,9 +43,6 @@ const SILENCE_END_MS = 1400;        // this much trailing silence ends the turn
 const MIN_SPEECH_MS = 400;          // shorter bursts are treated as noise
 const MIN_BLOB_BYTES = 2000;        // tiny recordings are discarded
 
-const SILENT_WAV =
-  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-
 const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode(
   { open, onClose, sendMessage, liveText },
   ref
@@ -58,8 +55,8 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
 
   const stateRef = useRef<VState>("idle");
   const aliveRef = useRef(false);
-  const playerRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const bufferSrcRef = useRef<AudioBufferSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -69,7 +66,6 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const speechStartRef = useRef(0);   // timestamp when speech first detected
   const silenceStartRef = useRef(0);  // timestamp when current silence began
   const orbRef = useRef<HTMLDivElement | null>(null);
-  const playUrlRef = useRef<string>("");
 
   // Bridge to the latest sendMessage — recorder.onstop callbacks live across
   // renders, so a direct closure would capture stale chat state (e.g. the
@@ -95,22 +91,9 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
             (window as any).webkitAudioContext;
           if (Ctx) audioCtxRef.current = new Ctx();
         }
+        // One gesture-bound resume authorizes this context for the whole
+        // session — both VAD analysis and Web Audio playback run through it.
         audioCtxRef.current?.resume().catch(() => {});
-        const p = playerRef.current;
-        if (p) {
-          p.muted = true;
-          p.src = SILENT_WAV;
-          const pr = p.play();
-          if (pr) {
-            pr.then(() => {
-              p.pause();
-              p.currentTime = 0;
-              p.muted = false;
-            }).catch(() => {
-              p.muted = false;
-            });
-          }
-        }
       } catch { /* unlock is best-effort */ }
     },
   }));
@@ -132,17 +115,13 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     analyserRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
-    const p = playerRef.current;
-    if (p) {
-      p.onended = null;
-      p.onerror = null;
-      try { p.pause(); } catch { /* noop */ }
-      p.removeAttribute("src");
+    const src = bufferSrcRef.current;
+    if (src) {
+      src.onended = null;
+      try { src.stop(); } catch { /* already stopped */ }
+      bufferSrcRef.current = null;
     }
-    if (playUrlRef.current) {
-      URL.revokeObjectURL(playUrlRef.current);
-      playUrlRef.current = "";
-    }
+    audioCtxRef.current?.suspend().catch(() => {});
     setStateBoth("idle");
   }, []);
 
@@ -312,10 +291,12 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t, startListening]);
 
-  // --- TTS playback --------------------------------------------------------------
+  // --- TTS playback (Web Audio, same context as VAD) ------------------------------
+  // Using an <audio> element here would make iOS "interrupt" the shared
+  // AudioContext during playback, killing the analyser for all later turns.
+  // Decoding + BufferSource keeps everything inside one context.
   const speak = useCallback(
     async (text: string) => {
-      const player = playerRef.current;
       let blob: Blob | null = null;
       try {
         blob = await fetchTTSBlob(text);
@@ -324,36 +305,34 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
         setErrorMsg(err instanceof Error ? err.message : String(err));
       }
       if (!aliveRef.current) return;
-      if (!blob || !player) {
+      const ctx = audioCtxRef.current;
+      if (!blob || !ctx) {
         // Nothing to speak / TTS unconfigured — continue the loop
         startListening();
         return;
       }
 
-      setStateBoth("speaking");
-      if (playUrlRef.current) URL.revokeObjectURL(playUrlRef.current);
-      const url = URL.createObjectURL(blob);
-      playUrlRef.current = url;
-
-      const advance = () => {
-        player.onended = null;
-        player.onerror = null;
-        if (playUrlRef.current) {
-          URL.revokeObjectURL(playUrlRef.current);
-          playUrlRef.current = "";
-        }
-        if (aliveRef.current) startListening();
-      };
-      player.onended = advance;
-      player.onerror = advance;
-      player.src = url;
       try {
-        await player.play();
+        setStateBoth("speaking");
+        const arrayBuf = await blob.arrayBuffer();
+        const audioBuf = await ctx.decodeAudioData(arrayBuf);
+        if (!aliveRef.current) return;
+        ctx.resume().catch(() => {});
+        const src = ctx.createBufferSource();
+        src.buffer = audioBuf;
+        src.connect(ctx.destination);
+        src.onended = () => {
+          if (bufferSrcRef.current === src) bufferSrcRef.current = null;
+          if (aliveRef.current && stateRef.current === "speaking") {
+            startListening();
+          }
+        };
+        bufferSrcRef.current = src;
+        src.start();
       } catch {
-        // Autoplay rejected (shouldn't happen after unlock) — keep the loop alive
-        advance();
+        // Decode/playback failure — reply text is on screen, keep looping
+        if (aliveRef.current) startListening();
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [startListening]
   );
@@ -366,18 +345,13 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       silenceStartRef.current = silenceStartRef.current || performance.now();
       finishTurn();
     } else if (stateRef.current === "speaking") {
-      // Skip playback, jump straight to the next listening turn
-      const player = playerRef.current;
-      if (player) {
-        player.onended = null;
-        player.onerror = null;
-        try { player.pause(); } catch { /* noop */ }
+      // Skip playback — stopping fires onended, which advances the loop
+      const src = bufferSrcRef.current;
+      if (src) {
+        try { src.stop(); } catch { /* already ended */ }
+      } else {
+        startListening();
       }
-      if (playUrlRef.current) {
-        URL.revokeObjectURL(playUrlRef.current);
-        playUrlRef.current = "";
-      }
-      startListening();
     }
   };
 
@@ -411,9 +385,6 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
 
   return (
     <>
-      {/* Always mounted — unlocked once by the opening tap, reused all session */}
-      <audio ref={playerRef} playsInline style={{ display: "none" }} />
-
       {open && (
         <div
           style={{
