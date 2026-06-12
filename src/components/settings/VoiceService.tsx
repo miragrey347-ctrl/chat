@@ -96,10 +96,10 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
       setPreviewing(false);
       return;
     }
-    if (service === "openai" && !oaiKey) { setError("请先填写 API Key"); return; }
+    if (service === "openai" && !oaiKey) { setError(t("voiceNeedApiKey")); return; }
     if (service === "elevenlabs") {
-      if (!elKey) { setError("请先填写 API Key"); return; }
-      if (!elVoice) { setError("请填写 Voice ID"); return; }
+      if (!elKey) { setError(t("voiceNeedApiKey")); return; }
+      if (!elVoice) { setError(t("voiceNeedVoiceId")); return; }
     }
 
     const apiKey = service === "openai" ? oaiKey : service === "elevenlabs" ? elKey : "";
@@ -247,9 +247,9 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
                 onChange={(e) => { setElModel(e.target.value); save("tts-el-model", e.target.value); }}
                 style={selectStyle}
               >
-                <option value="eleven_v3">Eleven v3 (70+ 语言)</option>
-                <option value="eleven_multilingual_v2">Multilingual v2 (29 语言)</option>
-                <option value="eleven_flash_v2_5">Flash v2.5 (低延迟)</option>
+                <option value="eleven_v3">{t("elModelV3")}</option>
+                <option value="eleven_multilingual_v2">{t("elModelMulti")}</option>
+                <option value="eleven_flash_v2_5">{t("elModelFlash")}</option>
               </select>
             </Field>
             <SettingsDivider />
@@ -261,7 +261,7 @@ export default function VoiceService({ nav }: { nav: NavContext }) {
                 style={{ ...inputStyle, fontFamily: "monospace" }}
               />
               <p style={{ fontSize: "12px", color: "var(--text-tertiary)", marginTop: "4px" }}>
-                elevenlabs.io → Voices → 复制 Voice ID
+                {t("elVoiceIdHint")}
               </p>
             </Field>
           </SettingsCard>

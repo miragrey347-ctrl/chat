@@ -596,7 +596,7 @@ export default function ChatMessage({
                     cursor: "pointer",
                   }}
                 >
-                  取消
+                  {t("cancel")}
                 </button>
                 <button
                   onClick={handleEditSubmit}
@@ -611,7 +611,7 @@ export default function ChatMessage({
                     cursor: "pointer",
                   }}
                 >
-                  重新发送
+                  {t("resend")}
                 </button>
               </div>
             </div>

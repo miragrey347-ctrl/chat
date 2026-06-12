@@ -155,7 +155,7 @@ export default function Sidebar({
         <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
           {starred.length > 0 && (
             <div style={{ padding: "8px 8px 4px", fontSize: "11px", color: "var(--text-tertiary)", fontWeight: 500 }}>
-              星标
+              {t("starred")}
             </div>
           )}
           {starred.map((conv) => (

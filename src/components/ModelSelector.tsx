@@ -287,7 +287,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
                     cursor: "pointer",
                   }}
                 >
-                  取消
+                  {t("cancel")}
                 </button>
                 <button
                   onClick={handleAdd}
@@ -304,7 +304,7 @@ export default function ModelSelector({ currentModel, onChange }: ModelSelectorP
                     cursor: newModelId.trim() && newDisplayName.trim() ? "pointer" : "default",
                   }}
                 >
-                  添加
+                  {t("add")}
                 </button>
               </div>
             </div>

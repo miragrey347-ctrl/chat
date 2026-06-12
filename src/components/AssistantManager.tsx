@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Assistant } from "@/lib/types";
+import { useLocale } from "@/lib/i18n";
 
 interface Memory {
   id: string;
@@ -18,6 +19,7 @@ interface AssistantManagerProps {
 }
 
 export default function AssistantManager({ assistants, isOpen, onClose, onRefresh, onRefreshMemories }: AssistantManagerProps) {
+  const { t } = useLocale();
   const [editing, setEditing] = useState<Assistant | null>(null);
   const [creating, setCreating] = useState(false);
   const [tab, setTab] = useState<"assistants" | "memories">("assistants");
@@ -71,24 +73,24 @@ export default function AssistantManager({ assistants, isOpen, onClose, onRefres
         overflowY: "auto",
       }}>
         <div style={{ padding: "20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)" }}>设置</h2>
+          <h2 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)" }}>{t("settings")}</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-tertiary)", fontSize: "20px", cursor: "pointer" }}>✕</button>
         </div>
 
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: "1px solid var(--border-subtle)" }}>
-          {(["assistants", "memories"] as const).map((t) => (
+          {(["assistants", "memories"] as const).map((tk) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tk}
+              onClick={() => setTab(tk)}
               style={{
                 flex: 1, padding: "12px", border: "none", background: "transparent",
-                color: tab === t ? "var(--accent)" : "var(--text-tertiary)",
-                borderBottom: tab === t ? "2px solid var(--accent)" : "2px solid transparent",
+                color: tab === tk ? "var(--accent)" : "var(--text-tertiary)",
+                borderBottom: tab === tk ? "2px solid var(--accent)" : "2px solid transparent",
                 fontSize: "13px", fontWeight: 500, cursor: "pointer",
               }}
             >
-              {t === "assistants" ? "助手" : "全局记忆"}
+              {tk === "assistants" ? t("assistants") : t("globalMemory")}
             </button>
           ))}
         </div>
@@ -102,7 +104,7 @@ export default function AssistantManager({ assistants, isOpen, onClose, onRefres
                   value={newMemory}
                   onChange={(e) => setNewMemory(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addGlobalMemory()}
-                  placeholder="添加一条全局记忆..."
+                  placeholder={t("addGlobalMemoryPlaceholder")}
                   style={{
                     flex: 1, background: "var(--bg-input)", border: "1px solid var(--border-color)",
                     borderRadius: "10px", padding: "10px 14px", fontSize: "13px",
@@ -118,10 +120,10 @@ export default function AssistantManager({ assistants, isOpen, onClose, onRefres
                     border: "none", borderRadius: "10px", padding: "10px 16px",
                     fontSize: "13px", fontWeight: 500, cursor: newMemory.trim() ? "pointer" : "default",
                   }}
-                >添加</button>
+                >{t("add")}</button>
               </div>
               <p style={{ fontSize: "11px", color: "var(--text-tertiary)", marginBottom: "12px" }}>
-                全局记忆会注入到所有助手的系统提示词中。
+                {t("globalMemoryDesc")}
               </p>
               {globalMemories.map((m) => (
                 <div key={m.id} style={{
@@ -139,7 +141,7 @@ export default function AssistantManager({ assistants, isOpen, onClose, onRefres
                 </div>
               ))}
               {globalMemories.length === 0 && (
-                <p style={{ textAlign: "center", color: "var(--text-tertiary)", fontSize: "13px", padding: "30px 0" }}>暂无全局记忆</p>
+                <p style={{ textAlign: "center", color: "var(--text-tertiary)", fontSize: "13px", padding: "30px 0" }}>{t("noGlobalMemories")}</p>
               )}
             </div>
           ) : editing || creating ? (
@@ -167,7 +169,7 @@ export default function AssistantManager({ assistants, isOpen, onClose, onRefres
                   fontWeight: 500, cursor: "pointer", marginBottom: "16px",
                 }}
               >
-                + 新建助手
+                + {t("newAssistant")}
               </button>
 
               {assistants.map((a) => (
@@ -178,25 +180,25 @@ export default function AssistantManager({ assistants, isOpen, onClose, onRefres
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                     <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-primary)" }}>{a.name}</span>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <button onClick={() => setEditing(a)} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "13px", cursor: "pointer" }}>编辑</button>
+                      <button onClick={() => setEditing(a)} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "13px", cursor: "pointer" }}>{t("edit")}</button>
                       <button onClick={async () => {
-                        if (confirm("确定删除？")) {
+                        if (confirm(t("confirmDeleteAssistant"))) {
                           await fetch("/api/assistants", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: a.id }) });
                           onRefresh();
                         }
-                      }} style={{ background: "none", border: "none", color: "#e5737f", fontSize: "13px", cursor: "pointer" }}>删除</button>
+                      }} style={{ background: "none", border: "none", color: "#e5737f", fontSize: "13px", cursor: "pointer" }}>{t("delete")}</button>
                     </div>
                   </div>
                   {a.tags && <div style={{ fontSize: "11px", color: "var(--accent)", marginBottom: "4px" }}>{a.tags}</div>}
                   <div style={{ fontSize: "12px", color: "var(--text-tertiary)", lineHeight: 1.5 }}>
-                    {a.system_prompt ? (a.system_prompt.length > 100 ? a.system_prompt.slice(0, 100) + "..." : a.system_prompt) : "无系统提示词"}
+                    {a.system_prompt ? (a.system_prompt.length > 100 ? a.system_prompt.slice(0, 100) + "..." : a.system_prompt) : t("noSystemPrompt")}
                   </div>
                   <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "6px" }}>
-                    模型: {a.default_model.split("/").pop()}
+                    {t("defaultModel")}: {a.default_model.split("/").pop()}
                   </div>
                   {a.quick_messages && Array.isArray(a.quick_messages) && a.quick_messages.length > 0 && (
                     <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "4px" }}>
-                      快捷消息: {a.quick_messages.map((q: {name: string}) => q.name).join(", ")}
+                      {t("quickMessages")}: {a.quick_messages.map((q: {name: string}) => q.name).join(", ")}
                     </div>
                   )}
                 </div>
@@ -218,6 +220,7 @@ function AssistantForm({
   onSave: (data: Partial<Assistant>) => void;
   onCancel: () => void;
 }) {
+  const { t } = useLocale();
   const [name, setName] = useState(assistant?.name || "");
   const [tags, setTags] = useState(assistant?.tags || "");
   const [systemPrompt, setSystemPrompt] = useState(assistant?.system_prompt || "");
@@ -252,44 +255,44 @@ function AssistantForm({
   return (
     <div>
       <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
-        {assistant ? "编辑助手" : "新建助手"}
+        {assistant ? t("editAssistant") : t("newAssistant")}
       </h3>
 
-      <label style={labelStyle}>名称</label>
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="助手名称" style={inputStyle} />
+      <label style={labelStyle}>{t("assistantName")}</label>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("assistantNamePlaceholder")} style={inputStyle} />
 
-      <label style={labelStyle}>标签（可选）</label>
-      <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="如：聊天、翻译、工作" style={inputStyle} />
+      <label style={labelStyle}>{t("tagsOptional")}</label>
+      <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder={t("tagsExample")} style={inputStyle} />
 
-      <label style={labelStyle}>默认模型 ID</label>
+      <label style={labelStyle}>{t("defaultModelId")}</label>
       <input value={defaultModel} onChange={(e) => setDefaultModel(e.target.value)} placeholder="anthropic/claude-sonnet-4" style={inputStyle} />
 
-      <label style={labelStyle}>系统提示词</label>
+      <label style={labelStyle}>{t("systemPrompt")}</label>
       <textarea
         value={systemPrompt}
         onChange={(e) => setSystemPrompt(e.target.value)}
-        placeholder="输入 system prompt..."
+        placeholder={t("systemPromptInput")}
         rows={8}
         style={{ ...inputStyle, resize: "vertical", minHeight: "120px", lineHeight: 1.6 }}
       />
       <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "4px", textAlign: "right" }}>
-        {systemPrompt.length} 字符
+        {systemPrompt.length} {t("charsUnit")}
       </div>
 
       {/* Quick messages */}
-      <label style={labelStyle}>快捷消息</label>
+      <label style={labelStyle}>{t("quickMessagesLabel")}</label>
       {quickMsgs.map((q, i) => (
         <div key={i} style={{ display: "flex", gap: "6px", marginBottom: "6px", alignItems: "center" }}>
           <input
             value={q.name}
             onChange={(e) => { const u = [...quickMsgs]; u[i] = { ...u[i], name: e.target.value }; setQuickMsgs(u); }}
-            placeholder="按钮名"
+            placeholder={t("buttonName")}
             style={{ ...inputStyle, width: "30%" }}
           />
           <input
             value={q.content}
             onChange={(e) => { const u = [...quickMsgs]; u[i] = { ...u[i], content: e.target.value }; setQuickMsgs(u); }}
-            placeholder="发送内容"
+            placeholder={t("sendContent")}
             style={{ ...inputStyle, flex: 1 }}
           />
           <button
@@ -305,11 +308,11 @@ function AssistantForm({
           padding: "8px", width: "100%", color: "var(--text-tertiary)", fontSize: "13px", cursor: "pointer",
         }}
       >
-        + 添加快捷消息
+        + {t("addQuickMessage")}
       </button>
 
       {/* Memory toggle */}
-      <label style={labelStyle}>助手记忆</label>
+      <label style={labelStyle}>{t("assistantMemory")}</label>
       <div
         onClick={() => setMemoryEnabled(!memoryEnabled)}
         style={{
@@ -319,7 +322,7 @@ function AssistantForm({
         }}
       >
         <span style={{ fontSize: "13px", color: "var(--text-primary)" }}>
-          启用助手级记忆
+          {t("enableAssistantMemory")}
         </span>
         <div style={{
           width: "36px", height: "20px", borderRadius: "10px",
@@ -334,7 +337,7 @@ function AssistantForm({
         </div>
       </div>
       <p style={{ fontSize: "11px", color: "var(--text-tertiary)", marginTop: "4px", marginLeft: "2px" }}>
-        开启后，助手记忆会注入到系统提示词中。
+        {t("assistantMemoryDesc")}
       </p>
 
       {/* Actions */}
@@ -343,7 +346,7 @@ function AssistantForm({
           flex: 1, padding: "12px", borderRadius: "12px",
           border: "1px solid var(--border-color)", background: "transparent",
           color: "var(--text-secondary)", fontSize: "14px", cursor: "pointer",
-        }}>取消</button>
+        }}>{t("cancel")}</button>
         <button
           onClick={() => onSave({ name, tags, system_prompt: systemPrompt, default_model: defaultModel, quick_messages: quickMsgs, memory_enabled: memoryEnabled })}
           disabled={!name.trim()}
@@ -353,7 +356,7 @@ function AssistantForm({
             color: name.trim() ? "#1a1410" : "var(--text-tertiary)",
             fontSize: "14px", fontWeight: 500, cursor: name.trim() ? "pointer" : "default",
           }}
-        >保存</button>
+        >{t("save")}</button>
       </div>
     </div>
   );

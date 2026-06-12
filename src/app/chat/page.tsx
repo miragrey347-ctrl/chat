@@ -578,7 +578,7 @@ export default function ChatPage() {
       const updated = [...prev];
       const last = updated[updated.length - 1];
       if (last.role === "assistant") {
-        updated[updated.length - 1] = { ...last, content: `⚠️ 错误：${errorMessage}` };
+        updated[updated.length - 1] = { ...last, content: `⚠️ ${t("errorPrefix")}: ${errorMessage}` };
       }
       return updated;
     });
@@ -1552,7 +1552,7 @@ export default function ChatPage() {
             }}
           >
             <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "16px" }}>
-              快捷键
+              {t("shortcuts")}
             </h3>
             {[
               ["⌘/Ctrl + N", t("newConversation")],
@@ -1603,7 +1603,7 @@ export default function ChatPage() {
                 touchAction: "manipulation",
               }}
             >
-              关闭
+              {t("close")}
             </button>
           </div>
         </>
