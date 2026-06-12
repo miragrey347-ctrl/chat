@@ -33,6 +33,10 @@ interface VoiceModeProps {
   sendMessage: (content: string) => Promise<string | undefined>;
   // Live assistant text while streaming (for subtitles during "thinking")
   liveText?: string;
+  // Aborts the in-flight LLM stream (page-level AbortController). Called on
+  // barge-in so the old reply stops generating instead of running to the
+  // end in the background and stalling the next turn's pendingSend wait.
+  onAbortStream?: () => void;
 }
 
 type VState = "idle" | "listening" | "transcribing" | "thinking" | "speaking";
@@ -115,7 +119,7 @@ function streamSafeClean(raw: string): string {
 }
 
 const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode(
-  { open, onClose, sendMessage, liveText },
+  { open, onClose, sendMessage, liveText, onAbortStream },
   ref
 ) {
   const { t } = useLocale();
@@ -799,9 +803,14 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const handleBargeIn = useCallback(() => {
     if (stateRef.current !== "speaking") return;
     abortSpeech(); // stop playback, invalidate every in-flight segment
+    // Kill the old LLM stream too — otherwise it keeps generating in the
+    // background and the next turn waits on pendingSend for nothing.
+    // (Hanging up does NOT abort: leaving voice mode lets the reply finish
+    // in the chat; barging in means the user wants a different reply.)
+    onAbortStream?.();
     startListening();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abortSpeech, startListening]);
+  }, [abortSpeech, startListening, onAbortStream]);
 
   // While speaking, keep half an ear on the mic. The mic also hears our own
   // TTS through the speaker; iOS AEC removes most of that echo, and the

@@ -1709,6 +1709,7 @@ export default function ChatPage() {
             open={voiceOpen}
             onClose={() => setVoiceOpen(false)}
             sendMessage={handleSend}
+            onAbortStream={() => abortRef.current?.abort()}
             liveText={
               isStreaming && messages.length > 0 && messages[messages.length - 1].role === "assistant"
                 ? messages[messages.length - 1].content
