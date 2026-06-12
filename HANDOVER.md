@@ -27,7 +27,7 @@ iPad/iOS Safari 上 Tailwind 不可靠：关键尺寸一律 inline style + Webki
 - 听写：ChatInput 麦克风 = MediaRecorder → /api/stt → 填输入框
 
 ### VoiceMode 状态机
-idle / listening / transcribing / thinking / speaking（stateRef 同步镜像）。VAD：RMS 阈值 0.022、静音 1400ms 断句、MIN_SPEECH 400ms、MIN_BLOB 2000B。播放走共享 AudioContext 的 BufferSource（**绝不能用 `<audio>`**）。句子级流式 TTS：liveText → streamSafeClean →harvest 切句（首句 ≥14 字符逗号软切）→ enqueueSegment 并行合成（**并发闸门 ≤3 + 失败重试一次**，2026-06-12 加）→ pump 按 slot 保序播放 → drain 且 llmDone → 回 listening。turnIdRef 世代计数器作废在途异步；sendMessageRef 桥接防陈旧闭包；pendingSendRef 防并发发送。字幕跟语音（每段开播才上屏）。
+idle / listening / transcribing / thinking / speaking（stateRef 同步镜像）。VAD：RMS 阈值 0.022、静音 1400ms 断句、MIN_SPEECH 400ms、MIN_BLOB 2000B。播放走共享 AudioContext 的 BufferSource（**绝不能用 `<audio>`**）。句子级流式 TTS：liveText → streamSafeClean →harvest 切句（首句 ≥14 字符逗号软切）→ enqueueSegment 并行合成（**并发闸门 ≤3 + 失败重试一次**，2026-06-12 加；**<12 字符短句不单独成段**，攒入 pendingSegRef 与下句合并——生成式 TTS 短输入音色失锚会变性别，cc24019）→ pump 按 slot 保序播放 → drain 且 llmDone → 回 listening。turnIdRef 世代计数器作废在途异步；sendMessageRef 桥接防陈旧闭包；pendingSendRef 防并发发送。字幕跟语音（每段开播才上屏）。
 
 ### barge-in 插话打断（2026-06-12，commit 2953d62）
 speaking 期间半开麦：新检测循环读 VAD 同一个 analyser，RMS > 0.045（普通阈值 2 倍）持续 250ms → abortSpeech + startListening。回声防线 = iOS AEC（echoCancellation 一直开）+ 双倍阈值 + 持续时间门，参数保守（宁可要用户大声，绝不自我打断）。配套：liveText effect 有状态守卫（thinking/speaking 之外不 harvest——否则打断后旧 LLM 流借实时 turnId 把旧文偷渡进新队列）；startListening 有 listening 态防重入（barge 与 drain 竞态）。第一版限制：句首 ~250ms 损耗；thinking 期间不可打断。打断后旧 LLM 流自然跑完（pendingSendRef 等待），超长旧流会让下一轮稍等。
@@ -72,7 +72,8 @@ DOM：`stage > .voice-cloud-spin[spinRef]{ blob-1..6（wrapper 管 morph 布局 
 - 2a6f90e 花瓣浮动 + b617140 squash + dd236db 胶囊：已验证通过（2026-06-12 "其它地方也没啥问题了"）
 - 51afde2/524bcb2 i18n → English 界面 Voice 设置页、助手弹窗、导出文件（已验证通过 2026-06-12）
 - 888b7ce 音频自愈（已验证通过：铃声打断后自愈、VAD 不误触）
-- **2953d62 barge-in：未验证** → 让 AI 讲长内容，中途正常音量清晰开口打断；观察两个失败模式：喊不停（阈值高）/ 自我打断（回声误触）
+- 2953d62 barge-in：已验证通过（2026-06-12）
+- cc24019 短句合并防变声：已验证通过（2026-06-12）——若日后长段**中途**仍偶发变声，那是 Eleven v3 段内漂移，建议切 Multilingual v2
 
 ## 6. 待办池
 
@@ -84,6 +85,6 @@ DOM：`stage > .voice-cloud-spin[spinRef]{ blob-1..6（wrapper 管 morph 布局 
 
 ## 7. 本窗口 commit 链（main，全部已部署）
 
-13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断
+13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断 → cc24019 短句合并防 TTS 变声。**本窗口全部改动均经 Mira 真机验证通过。**
 
 — 2026-06-12 的我，交棒 🍵
