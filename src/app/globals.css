@@ -48,7 +48,7 @@
 }
 
 /* ── Custom color themes (added 2026-06-12) ─────────────────────────── */
-[data-theme="sage"] {
+html[data-theme="sage"] {
   --bg-primary: #eef1e9;
   --bg-secondary: #ffffff;
   --bg-tertiary: #e2e8d9;
@@ -70,7 +70,7 @@
   color-scheme: light;
 }
 
-[data-theme="lavender"] {
+html[data-theme="lavender"] {
   --bg-primary: #f0edf5;
   --bg-secondary: #ffffff;
   --bg-tertiary: #e5e0ee;
@@ -92,7 +92,7 @@
   color-scheme: light;
 }
 
-[data-theme="ocean"] {
+html[data-theme="ocean"] {
   --bg-primary: #20272f;
   --bg-secondary: #293139;
   --bg-tertiary: #313a44;
@@ -114,7 +114,7 @@
   color-scheme: dark;
 }
 
-[data-theme="plum"] {
+html[data-theme="plum"] {
   --bg-primary: #2b232c;
   --bg-secondary: #342b35;
   --bg-tertiary: #3d333e;

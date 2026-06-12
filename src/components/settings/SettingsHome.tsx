@@ -3,6 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import type { NavContext } from "@/app/settings/page";
 import { useLocale } from "@/lib/i18n";
+import { THEME_BAR, THEME_SWATCH } from "@/lib/themeColors";
 
 interface SettingsHomeProps {
   nav: NavContext;
@@ -186,13 +187,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
     dark: t("dark"), light: t("light"), system: t("followSystem"),
     sage: t("themeSage"), lavender: t("themeLavender"), ocean: t("themeOcean"), plum: t("themePlum"),
   };
-  // status-bar color and the little accent swatch for each theme
-  const THEME_BAR: Record<string, string> = {
-    dark: "#2b2520", light: "#f5f0eb", sage: "#eef1e9", lavender: "#f0edf5", ocean: "#20272f", plum: "#2b232c",
-  };
-  const THEME_SWATCH: Record<string, string> = {
-    dark: "#c4956a", light: "#d4b896", sage: "#7d9a68", lavender: "#9a82c4", ocean: "#7aaccb", plum: "#c98aa6",
-  };
+
 
   useEffect(() => {
     const saved = localStorage.getItem("color-mode") || "dark";
