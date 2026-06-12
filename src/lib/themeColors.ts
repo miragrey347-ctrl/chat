@@ -19,6 +19,18 @@ export const THEME_SWATCH: Record<string, string> = {
   plum: "#c98aa6",
 };
 
+// Light/dark family of each theme, used for the color-scheme meta —
+// Safari weighs it when deciding whether to adopt a dark theme-color
+// for its chrome on a light-appearance system.
+export const THEME_SCHEME: Record<string, string> = {
+  dark: "dark",
+  light: "light",
+  sage: "light",
+  lavender: "light",
+  ocean: "dark",
+  plum: "dark",
+};
+
 export function resolveTheme(theme: string, prefersDark: boolean): string {
   return theme === "system" ? (prefersDark ? "dark" : "light") : theme;
 }

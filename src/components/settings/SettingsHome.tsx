@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import type { NavContext } from "@/app/settings/page";
 import { useLocale } from "@/lib/i18n";
-import { THEME_BAR, THEME_SWATCH } from "@/lib/themeColors";
+import { THEME_BAR, THEME_SWATCH, THEME_SCHEME } from "@/lib/themeColors";
 
 interface SettingsHomeProps {
   nav: NavContext;
@@ -208,6 +208,8 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
     document.documentElement.style.backgroundColor = THEME_BAR[resolved] || THEME_BAR.dark;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", THEME_BAR[resolved] || THEME_BAR.dark);
+    const sm = document.querySelector('meta[name="color-scheme"]');
+    if (sm) sm.setAttribute("content", THEME_SCHEME[resolved] || "dark");
     setShowThemePicker(false);
   };
 

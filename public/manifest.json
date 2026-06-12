@@ -4,8 +4,8 @@
   "description": "Personal AI Chat",
   "start_url": "/chat",
   "display": "standalone",
-  "background_color": "#f5efe7",
-  "theme_color": "#f5efe7",
+  "background_color": "#2b2520",
+  "theme_color": "#2b2520",
   "orientation": "any",
   "icons": [
     {
