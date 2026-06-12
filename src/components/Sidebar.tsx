@@ -74,6 +74,7 @@ export default function Sidebar({
           width: "100vw",
           height: "100vh",
           zIndex: 50,
+          paddingTop: "env(safe-area-inset-top)",
           pointerEvents: isOpen ? "auto" : "none",
         }}
       >

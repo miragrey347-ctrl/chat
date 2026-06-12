@@ -7,6 +7,12 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // Extend the page under the status bar / home indicator in standalone
+  // mode — paired with black-translucent below, the status bar becomes a
+  // transparent overlay showing the page's own background, which is the
+  // only way an iOS PWA status bar can follow a dynamic theme (the manifest
+  // theme_color is frozen at install time).
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -15,7 +21,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Aethera",
   },
   icons: {

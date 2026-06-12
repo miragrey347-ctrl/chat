@@ -507,7 +507,7 @@ function BottomSheet({
           background: "var(--bg-secondary)",
           borderRadius: "16px 16px 0 0",
           padding: "24px 20px",
-          paddingBottom: "24px",
+          paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
           zIndex: 310,
           animation: "sheet-up 280ms cubic-bezier(0.25, 0.1, 0.25, 1)",
         }}
