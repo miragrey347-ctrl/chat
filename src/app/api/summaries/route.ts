@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const supabase = createServiceClient();
-    const { conversation_id, assistant_id } = await request.json();
+    const { conversation_id, assistant_id, locale } = await request.json();
 
     if (!conversation_id || !assistant_id) {
       return NextResponse.json({ error: "conversation_id and assistant_id required" }, { status: 400 });
@@ -63,9 +63,10 @@ export async function POST(request: Request) {
     }
 
     // Build chat log (truncate each message to 500 chars)
+    const en = locale === "en";
     const chatLog = messages
       .map((m: { role: string; content: string }) =>
-        `${m.role === "user" ? "用户" : "助手"}：${m.content.slice(0, 500)}`
+        `${m.role === "user" ? (en ? "User" : "用户") : (en ? "Assistant" : "助手")}${en ? ": " : "："}${m.content.slice(0, 500)}`
       )
       .join("\n");
 
@@ -87,7 +88,9 @@ export async function POST(request: Request) {
         messages: [
           {
             role: "user",
-            content: `用200-300字总结以下对话的要点，包括讨论了什么话题、做了什么决定、有什么重要信息。只返回摘要文本，不要其他内容。\n\n${chatLog}`,
+            content: en
+              ? `Summarize the key points of the following conversation in 200-300 words: topics discussed, decisions made, and any important information. Return only the summary text, nothing else.\n\n${chatLog}`
+              : `用200-300字总结以下对话的要点，包括讨论了什么话题、做了什么决定、有什么重要信息。只返回摘要文本，不要其他内容。\n\n${chatLog}`,
           },
         ],
       }),

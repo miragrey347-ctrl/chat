@@ -35,7 +35,7 @@ export default function ChatPage() {
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [searching, setSearching] = useState(false);
   const [thinkingMode, setThinkingMode] = useState(false);
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [thinkingBudget, setThinkingBudget] = useState(10000);
 
   // Load search enabled from settings
@@ -203,6 +203,7 @@ export default function ChatPage() {
             body: JSON.stringify({
               conversation_id: prevId,
               assistant_id: prevConv.assistant_id,
+              locale,
             }),
           }).catch((e) => console.error("Summary generation failed:", e));
         }
@@ -643,7 +644,7 @@ export default function ChatPage() {
       convPromise = fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assistant_id: assistantId, current_model: model }),
+        body: JSON.stringify({ assistant_id: assistantId, current_model: model, title: t("untitledConversation") }),
       }).then((r) => r.json()).then((conv) => {
         convId = conv.id;
         setCurrentConvId(conv.id);
@@ -1121,19 +1122,19 @@ export default function ChatPage() {
 
     if (format === "md") {
       let md = `# ${title}\n\n`;
-      if (assistant) md += `**助手**：${assistant.name}　**模型**：${model}\n\n---\n\n`;
+      if (assistant) md += `**${t("exportAssistant")}**: ${assistant.name}　**${t("exportModel")}**: ${model}\n\n---\n\n`;
       messages.forEach((m) => {
         const time = formatTimestamp(m.created_at);
         if (m.role === "user") {
-          md += `### 🧑 用户　${time}\n\n${m.content}\n\n`;
+          md += `### 🧑 ${t("exportUser")}　${time}\n\n${m.content}\n\n`;
         } else if (m.role === "assistant") {
-          md += `### 🤖 助手　${time}\n\n`;
+          md += `### 🤖 ${t("exportAssistant")}　${time}\n\n`;
           if (m.thinking_content) {
-            md += `<details><summary>思维过程</summary>\n\n${m.thinking_content}\n\n</details>\n\n`;
+            md += `<details><summary>${t("exportThinking")}</summary>\n\n${m.thinking_content}\n\n</details>\n\n`;
           }
           md += `${m.content}\n\n`;
           if (m.input_tokens || m.output_tokens) {
-            md += `> 输入: ${m.input_tokens?.toLocaleString() || "-"} · 输出: ${m.output_tokens?.toLocaleString() || "-"}\n\n`;
+            md += `> ${t("exportInput")}: ${m.input_tokens?.toLocaleString() || "-"} · ${t("exportOutput")}: ${m.output_tokens?.toLocaleString() || "-"}\n\n`;
           }
         }
         md += "---\n\n";
@@ -1144,10 +1145,10 @@ export default function ChatPage() {
 
     // txt
     let txt = `${title}\n${"=".repeat(title.length)}\n\n`;
-    if (assistant) txt += `助手：${assistant.name}　模型：${model}\n\n`;
+    if (assistant) txt += `${t("exportAssistant")}: ${assistant.name}　${t("exportModel")}: ${model}\n\n`;
     messages.forEach((m) => {
       const time = formatTimestamp(m.created_at);
-      const role = m.role === "user" ? "用户" : "助手";
+      const role = m.role === "user" ? t("exportUser") : t("exportAssistant");
       txt += `[${role}] ${time}\n${m.content}\n\n`;
     });
     triggerDownload(txt, `${safeTitle}.txt`, "text/plain");

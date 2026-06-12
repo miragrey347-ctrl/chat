@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "@/lib/i18n";
 
 const SQL = `-- 助手表
 CREATE TABLE IF NOT EXISTS assistants (
@@ -68,6 +69,7 @@ DROP POLICY IF EXISTS "Allow all on messages" ON messages;
 CREATE POLICY "Allow all on messages" ON messages FOR ALL USING (true) WITH CHECK (true);`;
 
 export default function SetupPage() {
+  const { t } = useLocale();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -94,10 +96,10 @@ export default function SetupPage() {
           marginBottom: "8px",
         }}
       >
-        数据库初始化
+        {t("setupTitle")}
       </h1>
       <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginBottom: "24px", lineHeight: 1.6 }}>
-        点击下方按钮复制 SQL，然后去 Supabase 的 SQL Editor 粘贴运行。
+        {t("setupHint")}
       </p>
 
       <button
@@ -116,7 +118,7 @@ export default function SetupPage() {
           transition: "background 0.2s",
         }}
       >
-        {copied ? "✓ 已复制到剪贴板" : "复制建表 SQL"}
+        {copied ? t("setupCopied") : t("setupCopySql")}
       </button>
 
       <a
@@ -139,7 +141,7 @@ export default function SetupPage() {
           marginBottom: "32px",
         }}
       >
-        打开 Supabase SQL Editor →
+        {t("setupOpenEditor")}
       </a>
 
       <pre
