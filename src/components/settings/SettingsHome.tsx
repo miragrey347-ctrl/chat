@@ -182,7 +182,17 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
   const { locale, setLocale, t } = useLocale();
   const currentLang = locale === "en" ? "English" : "简体中文";
 
-  const themeLabels: Record<string, string> = { dark: t("dark"), light: t("light"), system: t("followSystem") };
+  const themeLabels: Record<string, string> = {
+    dark: t("dark"), light: t("light"), system: t("followSystem"),
+    sage: t("themeSage"), lavender: t("themeLavender"), ocean: t("themeOcean"), plum: t("themePlum"),
+  };
+  // status-bar color and the little accent swatch for each theme
+  const THEME_BAR: Record<string, string> = {
+    dark: "#2b2520", light: "#f5f0eb", sage: "#eef1e9", lavender: "#f0edf5", ocean: "#20272f", plum: "#2b232c",
+  };
+  const THEME_SWATCH: Record<string, string> = {
+    dark: "#c4956a", light: "#d4b896", sage: "#7d9a68", lavender: "#9a82c4", ocean: "#7aaccb", plum: "#c98aa6",
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem("color-mode") || "dark";
@@ -198,7 +208,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
       ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
       : value;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", resolved === "dark" ? "#2b2520" : "#f5efe7");
+    if (meta) meta.setAttribute("content", THEME_BAR[resolved] || THEME_BAR.dark);
     setShowThemePicker(false);
   };
 
@@ -344,7 +354,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
           >
             {t("colorModeTitle")}
           </h3>
-          {(["system", "dark", "light"] as const).map((themeKey) => (
+          {(["system", "dark", "light", "sage", "lavender", "ocean", "plum"] as const).map((themeKey) => (
             <button
               key={themeKey}
               onClick={() => applyTheme(themeKey)}
@@ -362,7 +372,22 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
                 cursor: "pointer",
               }}
             >
-              <span>{themeLabels[themeKey]}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    border: "1px solid var(--border-color)",
+                    background:
+                      themeKey === "system"
+                        ? `linear-gradient(135deg, ${THEME_SWATCH.light} 50%, ${THEME_SWATCH.dark} 50%)`
+                        : THEME_SWATCH[themeKey],
+                  }}
+                />
+                {themeLabels[themeKey]}
+              </span>
               <span
                 style={{
                   width: "20px",

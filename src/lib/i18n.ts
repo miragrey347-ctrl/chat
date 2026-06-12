@@ -284,6 +284,10 @@ const translations: Record<string, Record<Locale, string>> = {
   // ── i18n gap fixes: EN UI previously showed hardcoded Chinese ──
   "errorPrefix": { zh: "错误", en: "Error" },
   "noSystemPrompt": { zh: "无系统提示词", en: "No system prompt" },
+  "themeSage": { zh: "抹茶", en: "Sage" },
+  "themeLavender": { zh: "雾紫", en: "Lavender" },
+  "themeOcean": { zh: "海雾", en: "Ocean" },
+  "themePlum": { zh: "黑莓", en: "Plum" },
   "untitledConversation": { zh: "新对话", en: "New Chat" },
   "exportAssistant": { zh: "助手", en: "Assistant" },
   "exportModel": { zh: "模型", en: "Model" },
