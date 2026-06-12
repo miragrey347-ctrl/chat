@@ -45,6 +45,11 @@ const MIN_BLOB_BYTES = 2000;        // tiny recordings are discarded
 const BARGE_RMS_THRESHOLD = 0.045;  // ~2x the VAD threshold: echo residue
                                     // after iOS AEC stays well below this
 const BARGE_MIN_MS = 250;           // sustained voice required to interrupt
+const MIN_TTS_SEGMENT_CHARS = 12;   // generative TTS (Eleven v3, 4o-mini-tts)
+                                    // loses its voice anchor on very short
+                                    // inputs — "Hello!" alone can flip
+                                    // gender — so short sentences are merged
+                                    // with the next one before synthesis
 
 // Radial float of the thinking cloud, calibrated frame-by-frame against a
 // 5x slow-motion GPT capture (2026-06-11): per-petal tip travel ≈ ±3px
@@ -157,6 +162,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   const isPlayingRef = useRef(false);
   const llmDoneRef = useRef(false);
   const consumedRef = useRef(0);        // chars of cleaned text already enqueued
+  const pendingSegRef = useRef("");     // consumed-but-unsent short sentences
 
   // Bridge to the latest sendMessage — recorder.onstop callbacks live across
   // renders, so a direct closure would capture stale chat state (e.g. the
@@ -221,6 +227,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     playIdxRef.current = 0;
     llmDoneRef.current = false;
     consumedRef.current = 0;
+    pendingSegRef.current = "";
     audioCtxRef.current?.suspend().catch(() => {});
     setStateBoth("idle");
   }, []);
@@ -439,11 +446,15 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
       llmDoneRef.current = true;
       const clean = streamSafeClean(reply || "");
       harvest(clean, turnId); // cut remaining complete sentences one by one
+      let tail = "";
       if (clean.length > consumedRef.current) {
-        const tail = clean.slice(consumedRef.current).trim();
+        tail = clean.slice(consumedRef.current).trim();
         consumedRef.current = clean.length;
-        if (tail) enqueueSegment(tail, turnId);
       }
+      // Whatever short sentences were held back ride out with the tail.
+      const rest = (pendingSegRef.current + (pendingSegRef.current && tail ? " " : "") + tail).trim();
+      pendingSegRef.current = "";
+      if (rest) enqueueSegment(rest, turnId);
       pump(turnId);
     } catch (err) {
       if (!aliveRef.current) return;
@@ -477,6 +488,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     playIdxRef.current = 0;
     llmDoneRef.current = false;
     consumedRef.current = 0;
+    pendingSegRef.current = "";
   }, []);
 
   // Play the next ready slot in order; when drained and the LLM is done,
@@ -609,16 +621,29 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
         if (cut === -1) return;
         const first = cleanText.slice(0, cut).trim();
         consumedRef.current = cut;
-        if (first) enqueueSegment(first, turnId);
+        if (first) {
+          if (first.length >= MIN_TTS_SEGMENT_CHARS) enqueueSegment(first, turnId);
+          else pendingSegRef.current = first; // too short to anchor a voice
+        }
       }
-      // Every further complete sentence ships as its own segment, so
-      // subtitles and audio advance sentence by sentence.
+      // Every further complete sentence ships as its own segment — unless
+      // it is too short to keep the synthesized voice stable, in which case
+      // it rides along with the next sentence.
       for (;;) {
         const cut = nextCut(cleanText, consumedRef.current);
         if (cut === -1) break;
         const seg = cleanText.slice(consumedRef.current, cut).trim();
         consumedRef.current = cut;
-        if (seg) enqueueSegment(seg, turnId);
+        if (!seg) continue;
+        const merged = pendingSegRef.current
+          ? pendingSegRef.current + " " + seg
+          : seg;
+        if (merged.length >= MIN_TTS_SEGMENT_CHARS) {
+          pendingSegRef.current = "";
+          enqueueSegment(merged, turnId);
+        } else {
+          pendingSegRef.current = merged;
+        }
       }
     },
     [enqueueSegment]
