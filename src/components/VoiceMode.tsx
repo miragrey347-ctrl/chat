@@ -42,6 +42,9 @@ const SPEECH_RMS_THRESHOLD = 0.022; // above = speech, below = silence
 const SILENCE_END_MS = 1400;        // this much trailing silence ends the turn
 const MIN_SPEECH_MS = 400;          // shorter bursts are treated as noise
 const MIN_BLOB_BYTES = 2000;        // tiny recordings are discarded
+const BARGE_RMS_THRESHOLD = 0.045;  // ~2x the VAD threshold: echo residue
+                                    // after iOS AEC stays well below this
+const BARGE_MIN_MS = 250;           // sustained voice required to interrupt
 
 // Radial float of the thinking cloud, calibrated frame-by-frame against a
 // 5x slow-motion GPT capture (2026-06-11): per-petal tip travel ≈ ±3px
@@ -277,6 +280,7 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
   // --- start a listening turn --------------------------------------------------
   const startListening = useCallback(async () => {
     if (!aliveRef.current) return;
+    if (stateRef.current === "listening") return; // re-entry guard (barge vs drain race)
     setErrorMsg("");
     try {
       if (!streamRef.current) {
@@ -759,8 +763,58 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     if (!open || !aliveRef.current || llmDoneRef.current) return;
     if (stateRef.current !== "thinking" && stateRef.current !== "speaking") return;
     if (!liveText) return;
+    // Guard against a barged-in turn: after an interruption the old LLM
+    // stream keeps updating liveText, and harvesting it with the *current*
+    // turn id would smuggle the old reply into the new turn's queue.
+    if (stateRef.current !== "thinking" && stateRef.current !== "speaking") return;
     harvest(streamSafeClean(liveText), turnIdRef.current);
   }, [liveText, open, harvest]);
+
+  // --- barge-in: talk over the assistant to take the floor -------------------
+  const handleBargeIn = useCallback(() => {
+    if (stateRef.current !== "speaking") return;
+    abortSpeech(); // stop playback, invalidate every in-flight segment
+    startListening();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abortSpeech, startListening]);
+
+  // While speaking, keep half an ear on the mic. The mic also hears our own
+  // TTS through the speaker; iOS AEC removes most of that echo, and the
+  // doubled RMS threshold plus the sustained-duration gate handles the rest —
+  // tuned to never let the assistant interrupt itself, at the cost of the
+  // user having to speak up a little.
+  useEffect(() => {
+    if (vstate !== "speaking") return;
+    const analyser = analyserRef.current;
+    if (!analyser) return;
+    const data = new Uint8Array(analyser.fftSize);
+    let voiceStart = 0;
+    let raf = 0;
+    const tick = () => {
+      if (!aliveRef.current || stateRef.current !== "speaking") return;
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = (data[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / data.length);
+      if (rms > BARGE_RMS_THRESHOLD) {
+        const now = performance.now();
+        if (!voiceStart) {
+          voiceStart = now;
+        } else if (now - voiceStart > BARGE_MIN_MS) {
+          handleBargeIn();
+          return;
+        }
+      } else {
+        voiceStart = 0;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [vstate, handleBargeIn]);
 
   // --- orb tap: context-sensitive control ------------------------------------------
   const handleOrbTap = () => {
