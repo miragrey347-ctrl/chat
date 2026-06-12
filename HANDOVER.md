@@ -52,6 +52,9 @@ DOM：`stage > .voice-cloud-spin[spinRef]{ blob-1..6（wrapper 管 morph 布局 
 - 深水区（524bcb2）：对话默认标题由客户端传 `t("untitledConversation")`；`/api/summaries` 接 `locale` 生成对应语言摘要；导出 md/txt 标签走词典；setup 页文案双语
 - **白名单（刻意保留的中文，别"修"它们）**：语言自名（中文/日本語/简体中文）；记忆存储格式 `[文件:...]`（改了坏已存数据解析）；LLM 上下文标记（[搜索结果]/[全局记忆]/对话（日期）：/来源:/搜索指令）；SQL 注释与 DB 默认值（'新对话'/'默认助手'）；parse-file route（**死接口**，无人调用）；search route 错误（无用户可见路径）；summaries 双语分支内的中文字面量
 
+### 主题系统（2026-06-12）
+color-mode localStorage（system/dark/light/sage/lavender/ocean/plum）→ data-theme 属性 → globals.css 每主题 19 变量一块。三处必须同步：globals.css 主题块、layout.tsx 防闪烁内联脚本的 bars 查表（PWA 状态栏色 = bg-primary）、SettingsHome 的 THEME_BAR/THEME_SWATCH/选项数组/themeLabels（i18n key）。新增主题照抄四件套即可。浅色系以 light（香槟）为对比度模板，深色系以 dark（摩卡）为模板，只旋转色相。
+
 ## 4. 踩坑记录（必读）
 
 1. iOS `<audio>` 播放 interrupt 共享 AudioContext → VAD 死。播放必须同 context BufferSource
@@ -84,6 +87,6 @@ DOM：`stage > .voice-cloud-spin[spinRef]{ blob-1..6（wrapper 管 morph 布局 
 
 ## 7. 本窗口 commit 链（main，全部已部署）
 
-13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断 → cc24019 短句合并防 TTS 变声 → barge-in 截断聊天记录至已听到位置（含 PATCH /api/messages）。**本窗口全部改动均经 Mira 真机验证通过。**
+13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断 → cc24019 短句合并防 TTS 变声 → barge-in 截断聊天记录至已听到位置（含 PATCH /api/messages）→ 四个自定义颜色主题。**本窗口全部改动均经 Mira 真机验证通过。**
 
 — 2026-06-12 的我，交棒 🍵
