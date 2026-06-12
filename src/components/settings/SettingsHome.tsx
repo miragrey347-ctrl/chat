@@ -207,6 +207,10 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
     const resolved = value === "system"
       ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
       : value;
+    // Explicit inline color on <html>: a CSS-variable cascade alone does not
+    // invalidate iOS Safari's cached safe-area extension color (top/bottom
+    // bars kept the old theme until navigation) — an inline change does.
+    document.documentElement.style.backgroundColor = THEME_BAR[resolved] || THEME_BAR.dark;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", THEME_BAR[resolved] || THEME_BAR.dark);
     setShowThemePicker(false);
