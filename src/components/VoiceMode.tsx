@@ -33,10 +33,11 @@ interface VoiceModeProps {
   sendMessage: (content: string) => Promise<string | undefined>;
   // Live assistant text while streaming (for subtitles during "thinking")
   liveText?: string;
-  // Aborts the in-flight LLM stream (page-level AbortController). Called on
-  // barge-in so the old reply stops generating instead of running to the
-  // end in the background and stalling the next turn's pendingSend wait.
-  onAbortStream?: () => void;
+  // Barge-in handler: receives the text actually voiced so far. The page
+  // aborts a still-running stream AND truncates the last assistant message
+  // (memory + DB) to it — the text stream usually finishes long before TTS
+  // playback, so without truncation the chat keeps the full never-heard reply.
+  onBargeIn?: (spokenSoFar: string) => void;
 }
 
 type VState = "idle" | "listening" | "transcribing" | "thinking" | "speaking";
@@ -119,13 +120,14 @@ function streamSafeClean(raw: string): string {
 }
 
 const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode(
-  { open, onClose, sendMessage, liveText, onAbortStream },
+  { open, onClose, sendMessage, liveText, onBargeIn },
   ref
 ) {
   const { t } = useLocale();
   const [vstate, setVState] = useState<VState>("idle");
   const [userText, setUserText] = useState("");
   const [spokenText, setSpokenText] = useState("");
+  const spokenTextRef = useRef(""); // sync mirror for long-lived callbacks
   const [errorMsg, setErrorMsg] = useState("");
 
   const stateRef = useRef<VState>("idle");
@@ -799,18 +801,22 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
     harvest(streamSafeClean(liveText), turnIdRef.current);
   }, [liveText, open, harvest]);
 
+  useEffect(() => {
+    spokenTextRef.current = spokenText;
+  }, [spokenText]);
+
   // --- barge-in: talk over the assistant to take the floor -------------------
   const handleBargeIn = useCallback(() => {
     if (stateRef.current !== "speaking") return;
     abortSpeech(); // stop playback, invalidate every in-flight segment
-    // Kill the old LLM stream too — otherwise it keeps generating in the
-    // background and the next turn waits on pendingSend for nothing.
-    // (Hanging up does NOT abort: leaving voice mode lets the reply finish
-    // in the chat; barging in means the user wants a different reply.)
-    onAbortStream?.();
+    // Hand the page what was actually heard: it aborts a still-running
+    // stream and truncates the chat record to this text. (Hanging up does
+    // NOT do this: leaving voice mode lets the reply finish in the chat;
+    // barging in means the user is done with this reply.)
+    onBargeIn?.(spokenTextRef.current);
     startListening();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abortSpeech, startListening, onAbortStream]);
+  }, [abortSpeech, startListening, onBargeIn]);
 
   // While speaking, keep half an ear on the mic. The mic also hears our own
   // TTS through the speaker; iOS AEC removes most of that echo, and the

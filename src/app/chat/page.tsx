@@ -45,6 +45,7 @@ export default function ChatPage() {
   const [model, setModel] = useState("anthropic/claude-sonnet-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const bargedRef = useRef(false); // current reply was barged-in: its truncated form is canonical
   const [voiceOpen, setVoiceOpen] = useState(false);
   const voiceHandleRef = useRef<VoiceModeHandle | null>(null);
   const prevConvIdRef = useRef<string | null>(null);
@@ -527,7 +528,34 @@ export default function ChatPage() {
   };
 
   // Finalize assistant message: extract stats, save to DB, update UI
+  // After a voice barge-in: stop a still-running stream, then truncate the
+  // last assistant message (in memory and in the DB) to what the user
+  // actually heard. The text stream usually finishes long before TTS does,
+  // so aborting alone almost never fires — truncation is the real work.
+  const handleVoiceBargeIn = (spokenSoFar: string) => {
+    bargedRef.current = true;
+    abortRef.current?.abort();
+    const heard = spokenSoFar.trim();
+    if (!heard) return; // interrupted before anything was voiced: leave as is
+    setMessages((prev) => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last && last.role === "assistant") {
+        updated[updated.length - 1] = { ...last, content: heard };
+      }
+      return updated;
+    });
+    if (currentConvId) {
+      fetch("/api/messages", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: currentConvId, content: heard }),
+      }).catch((e) => console.error("Barge-in truncation failed:", e));
+    }
+  };
+
   const finalizeAssistantMessage = (convId: string, fullContent: string, thinkingContent: string, usageData: Record<string, unknown>, toolCalls?: Array<{ name: string; arguments: string }>, searchSources?: Array<{ title: string; snippet: string; url: string }>) => {
+    if (bargedRef.current) return; // race guard: truncated version already canonical
     const { cacheStatus, cachedTokens } = extractCacheInfo(usageData);
     const inputTokens = (usageData.prompt_tokens || usageData.input_tokens) as number | undefined || null;
     const outputTokens = (usageData.completion_tokens || usageData.output_tokens) as number | undefined || null;
@@ -636,6 +664,7 @@ export default function ChatPage() {
     content: string,
     attachments?: Attachment[]
   ): Promise<string | undefined> => {
+    bargedRef.current = false; // new request: previous barge-in no longer applies
     // Auto-create conversation if none selected
     let convId = currentConvId;
     let convPromise: Promise<string | null> | null = null;
@@ -1709,7 +1738,7 @@ export default function ChatPage() {
             open={voiceOpen}
             onClose={() => setVoiceOpen(false)}
             sendMessage={handleSend}
-            onAbortStream={() => abortRef.current?.abort()}
+            onBargeIn={handleVoiceBargeIn}
             liveText={
               isStreaming && messages.length > 0 && messages[messages.length - 1].role === "assistant"
                 ? messages[messages.length - 1].content
