@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { THEME_BAR, THEME_SCHEME, resolveTheme } from "@/lib/themeColors";
+import { THEME_BAR, THEME_SCHEME, resolveTheme, applyChrome } from "@/lib/themeColors";
 
 // The boot script in layout.tsx sets data-theme before first paint, but on
 // iOS a post-hydration pass was observed wiping it (content fell back to the
@@ -13,16 +13,8 @@ export default function ThemeGuard() {
     try {
       const t = localStorage.getItem("color-mode") || "dark";
       document.documentElement.setAttribute("data-theme", t);
-      const c =
-        THEME_BAR[
-          resolveTheme(t, window.matchMedia("(prefers-color-scheme: dark)").matches)
-        ] || THEME_BAR.dark;
-      document.documentElement.style.backgroundColor = c;
-      const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute("content", c);
       const r = resolveTheme(t, window.matchMedia("(prefers-color-scheme: dark)").matches);
-      const sm = document.querySelector('meta[name="color-scheme"]');
-      if (sm) sm.setAttribute("content", THEME_SCHEME[r] || "dark");
+      applyChrome(THEME_BAR[r] || THEME_BAR.dark, THEME_SCHEME[r] || "dark");
     } catch {
       /* never break the app over theming */
     }

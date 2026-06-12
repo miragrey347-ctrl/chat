@@ -34,3 +34,21 @@ export const THEME_SCHEME: Record<string, string> = {
 export function resolveTheme(theme: string, prefersDark: boolean): string {
   return theme === "system" ? (prefersDark ? "dark" : "light") : theme;
 }
+
+// Apply the chrome colors (status-bar meta, color-scheme meta, root
+// background). WebKit applies dynamic theme-color changes to its top and
+// bottom tints lazily — and sometimes drops one of them — so the values are
+// re-asserted on the next frames and once more shortly after.
+export function applyChrome(themeColor: string, scheme: string) {
+  if (typeof document === "undefined") return;
+  const set = () => {
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute("content", themeColor);
+    const s = document.querySelector('meta[name="color-scheme"]');
+    if (s) s.setAttribute("content", scheme);
+    document.documentElement.style.backgroundColor = themeColor;
+  };
+  set();
+  requestAnimationFrame(() => requestAnimationFrame(set));
+  setTimeout(set, 250);
+}

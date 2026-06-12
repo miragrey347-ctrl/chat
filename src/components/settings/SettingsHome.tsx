@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import type { NavContext } from "@/app/settings/page";
 import { useLocale } from "@/lib/i18n";
-import { THEME_BAR, THEME_SWATCH, THEME_SCHEME } from "@/lib/themeColors";
+import { THEME_BAR, THEME_SWATCH, THEME_SCHEME, applyChrome } from "@/lib/themeColors";
 
 interface SettingsHomeProps {
   nav: NavContext;
@@ -202,14 +202,9 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
     const resolved = value === "system"
       ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
       : value;
-    // Explicit inline color on <html>: a CSS-variable cascade alone does not
-    // invalidate iOS Safari's cached safe-area extension color (top/bottom
-    // bars kept the old theme until navigation) — an inline change does.
-    document.documentElement.style.backgroundColor = THEME_BAR[resolved] || THEME_BAR.dark;
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", THEME_BAR[resolved] || THEME_BAR.dark);
-    const sm = document.querySelector('meta[name="color-scheme"]');
-    if (sm) sm.setAttribute("content", THEME_SCHEME[resolved] || "dark");
+    // Inline root background + meta swap, re-asserted across frames —
+    // WebKit's safe-area extension and chrome tints update lazily.
+    applyChrome(THEME_BAR[resolved] || THEME_BAR.dark, THEME_SCHEME[resolved] || "dark");
     setShowThemePicker(false);
   };
 

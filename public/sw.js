@@ -1,4 +1,4 @@
-const CACHE_NAME = "chat-v1";
+const CACHE_NAME = "chat-v2"; // bumped: v1 pinned stale assets forever
 
 // Install: cache shell
 self.addEventListener("install", (event) => {
@@ -10,7 +10,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: clean old caches (this purges every v1 relic on activation)
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -20,14 +20,14 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch: network first, cache fallback for navigation
+// Fetch strategies
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
   // Skip API and streaming requests
   if (request.url.includes("/api/") || request.method !== "GET") return;
 
-  // For navigation requests: network first, cache fallback
+  // Navigation: network first, cache fallback (offline)
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -41,16 +41,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // For static assets: cache first
+  // Static assets: stale-while-revalidate. Chunk filenames here are NOT
+  // content-hashed (same URL can carry new bytes after a deploy), so
+  // cache-first pinned ancient CSS/JS forever — the "theme stuck on an
+  // older color" bug. Serve cached instantly, but always refresh in the
+  // background with cache:"no-cache" to punch through the HTTP cache too.
   if (request.url.match(/\.(js|css|png|jpg|svg|woff2?)$/)) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        });
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(request);
+        const refresh = fetch(request, { cache: "no-cache" })
+          .then((response) => {
+            if (response && response.ok) cache.put(request, response.clone());
+            return response;
+          })
+          .catch(() => cached);
+        return cached || refresh;
       })
     );
   }
