@@ -30,7 +30,7 @@ iPad/iOS Safari 上 Tailwind 不可靠：关键尺寸一律 inline style + Webki
 idle / listening / transcribing / thinking / speaking（stateRef 同步镜像）。VAD：RMS 阈值 0.022、静音 1400ms 断句、MIN_SPEECH 400ms、MIN_BLOB 2000B。播放走共享 AudioContext 的 BufferSource（**绝不能用 `<audio>`**）。句子级流式 TTS：liveText → streamSafeClean →harvest 切句（首句 ≥14 字符逗号软切）→ enqueueSegment 并行合成（**并发闸门 ≤3 + 失败重试一次**，2026-06-12 加；**<12 字符短句不单独成段**，攒入 pendingSegRef 与下句合并——生成式 TTS 短输入音色失锚会变性别，cc24019）→ pump 按 slot 保序播放 → drain 且 llmDone → 回 listening。turnIdRef 世代计数器作废在途异步；sendMessageRef 桥接防陈旧闭包；pendingSendRef 防并发发送。字幕跟语音（每段开播才上屏）。
 
 ### barge-in 插话打断（2026-06-12，commit 2953d62）
-speaking 期间半开麦：新检测循环读 VAD 同一个 analyser，RMS > 0.045（普通阈值 2 倍）持续 250ms → abortSpeech + startListening。回声防线 = iOS AEC（echoCancellation 一直开）+ 双倍阈值 + 持续时间门，参数保守（宁可要用户大声，绝不自我打断）。配套：liveText effect 有状态守卫（thinking/speaking 之外不 harvest——否则打断后旧 LLM 流借实时 turnId 把旧文偷渡进新队列）；startListening 有 listening 态防重入（barge 与 drain 竞态）。第一版限制：句首 ~250ms 损耗；thinking 期间不可打断（Mira 明确不做）。打断同时经 onAbortStream prop 调 page 的 abortRef.abort() 中止旧 LLM 流（handleStreamError 特判 AbortError 静默；**挂断刻意不 abort**——离开语音模式让回复在聊天里跑完，打断才意味着不要这条回复）。abort 后已生成的半截内容留在内存 messages（与 Esc 停止生成行为一致），不落库，刷新即丢——若要落库需改 processStream 部分内容带出，挂账。
+speaking 期间半开麦：新检测循环读 VAD 同一个 analyser，RMS > 0.045（普通阈值 2 倍）持续 250ms → abortSpeech + startListening。回声防线 = iOS AEC（echoCancellation 一直开）+ 双倍阈值 + 持续时间门，参数保守（宁可要用户大声，绝不自我打断）。配套：liveText effect 有状态守卫（thinking/speaking 之外不 harvest——否则打断后旧 LLM 流借实时 turnId 把旧文偷渡进新队列）；startListening 有 listening 态防重入（barge 与 drain 竞态）。第一版限制：句首 ~250ms 损耗；thinking 期间不可打断（Mira 明确不做）。打断经 onBargeIn(spokenSoFar) prop 通知 page：abort 仍在跑的流（**注意：文本流通常比 TTS 播放早结束几十秒，abort 几乎总是摸空，截断才是主菜**）+ 把最后一条 assistant **截断为用户实际听到的文本**（内存 setMessages + PATCH /api/messages upsert：DB 最后一条是 assistant 则 update，否则 insert——覆盖流已 finalize 与流被 abort 两种场景）。竞态守卫：page 的 bargedRef 在打断时置位让 finalize 跳过（防截断版被完整版覆盖回去），handleSend 开头复位。spokenText 经 spokenTextRef 镜像供长生命周期回调读取（教训 #4）。**挂断刻意不触发**——离开语音模式让回复跑完，打断才意味着不要这条回复。
 
 ### 音频自愈（2026-06-12 修复包，commit 888b7ce）
 iOS 随时可能 interrupt 共享 context（通知/Siri/来电），原代码无自愈 → VAD 死（症状：必须点球手动断句；MediaRecorder 不经此 context 所以转写仍正常）。四层防御：
@@ -84,6 +84,6 @@ DOM：`stage > .voice-cloud-spin[spinRef]{ blob-1..6（wrapper 管 morph 布局 
 
 ## 7. 本窗口 commit 链（main，全部已部署）
 
-13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断 → cc24019 短句合并防 TTS 变声 → barge-in 中止旧 LLM 流。**本窗口全部改动均经 Mira 真机验证通过。**
+13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断 → cc24019 短句合并防 TTS 变声 → barge-in 截断聊天记录至已听到位置（含 PATCH /api/messages）。**本窗口全部改动均经 Mira 真机验证通过。**
 
 — 2026-06-12 的我，交棒 🍵
