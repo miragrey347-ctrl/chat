@@ -53,7 +53,7 @@ DOM：`stage > .voice-cloud-spin[spinRef]{ blob-1..6（wrapper 管 morph 布局 
 - **白名单（刻意保留的中文，别"修"它们）**：语言自名（中文/日本語/简体中文）；记忆存储格式 `[文件:...]`（改了坏已存数据解析）；LLM 上下文标记（[搜索结果]/[全局记忆]/对话（日期）：/来源:/搜索指令）；SQL 注释与 DB 默认值（'新对话'/'默认助手'）；parse-file route（**死接口**，无人调用）；search route 错误（无用户可见路径）；summaries 双语分支内的中文字面量
 
 ### 主题系统（2026-06-12）
-color-mode localStorage（system/dark/light/sage/lavender/ocean/plum）→ data-theme 属性 → globals.css 每主题 19 变量一块。三处必须同步：globals.css 主题块、layout.tsx 防闪烁内联脚本的 bars 查表（PWA 状态栏色 = bg-primary）、SettingsHome 的 THEME_BAR/THEME_SWATCH/选项数组/themeLabels（i18n key）。新增主题照抄四件套即可。浅色系以 light（香槟）为对比度模板，深色系以 dark（摩卡）为模板，只旋转色相。
+color-mode localStorage（system/dark/light/sage/lavender/ocean/plum）→ data-theme 属性 → globals.css 每主题 19 变量一块。四处必须同步：globals.css 主题块（选择器用 html[data-theme=x] 压过 :root 兜底）、layout.tsx 内联脚本的 bars/schemes 查表、src/lib/themeColors.ts（THEME_BAR/SWATCH/SCHEME + applyChrome）、SettingsHome 选项数组与 themeLabels（i18n key）。ThemeGuard 组件挂载后重申主题（防运行时抹属性）。新增主题照抄四件套即可。浅色系以 light（香槟）为对比度模板，深色系以 dark（摩卡）为模板，只旋转色相。
 
 ## 4. 踩坑记录（必读）
 
@@ -69,6 +69,8 @@ color-mode localStorage（system/dark/light/sage/lavender/ocean/plum）→ data-
 10. iOS context interrupted 无自愈是系统性风险：任何长期 Web Audio 链路都要带 state 看门狗
 11. effect 顺序依赖：squash 编排 effect 必须声明在 spin effect 之后（覆盖其 cleanup 的回正）、EQ 之前（squashRef 先置位）
 12. 多个 `}, [vstate]);` 同文歧义 → 按行号 python 精准改
+13. **SW 缓存陷阱（重大）**：Turbopack chunk 文件名**不含内容哈希**（同 URL 跨部署内容会变，实验验证：改 CSS 重 build 文件名不变）。sw.js v1 对 js/css cache-first 零失效 → 用户设备被钉死在历史版本、新旧资源混杂（主题"停留在上上一个颜色"事件的真凶，多轮修复未完整到达设备）。v2 起静态资源 stale-while-revalidate 且后台刷新 `fetch(req,{cache:"no-cache"})` 穿透 HTTP 缓存。**任何"用户侧行为与代码不符/时好时坏"先怀疑缓存层**
+14. WebKit 的 chrome tint（状态栏/底部工具栏）对动态 meta theme-color 懒更新且可能丢失 → applyChrome() 跨帧双写重申；iOS 浅色系统外观下 Safari 会拒绝深色 theme-color（平台规矩，color-scheme meta 可改善不保证）；iOS PWA 在添加到主屏时**固化 manifest**，改 manifest 需删图标重加
 
 ## 5. 待 Mira 真机验证（按推送顺序，均未收到"可以了"）
 
@@ -87,6 +89,6 @@ color-mode localStorage（system/dark/light/sage/lavender/ocean/plum）→ data-
 
 ## 7. 本窗口 commit 链（main，全部已部署）
 
-13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断 → cc24019 短句合并防 TTS 变声 → barge-in 截断聊天记录至已听到位置（含 PATCH /api/messages）→ 四个自定义颜色主题。**本窗口全部改动均经 Mira 真机验证通过。**
+13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断 → cc24019 短句合并防 TTS 变声 → barge-in 截断聊天记录至已听到位置（含 PATCH /api/messages）→ 四个自定义颜色主题 → 主题稳定性三层防御 + color-scheme meta → **SW v2 缓存修复（关键）**。**本窗口全部改动均经 Mira 真机验证通过。**
 
 — 2026-06-12 的我，交棒 🍵
