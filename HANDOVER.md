@@ -70,7 +70,7 @@ color-mode localStorage（system/dark/light/sage/lavender/ocean/plum）→ data-
 11. effect 顺序依赖：squash 编排 effect 必须声明在 spin effect 之后（覆盖其 cleanup 的回正）、EQ 之前（squashRef 先置位）
 12. 多个 `}, [vstate]);` 同文歧义 → 按行号 python 精准改
 13. **SW 缓存陷阱（重大）**：Turbopack chunk 文件名**不含内容哈希**（同 URL 跨部署内容会变，实验验证：改 CSS 重 build 文件名不变）。sw.js v1 对 js/css cache-first 零失效 → 用户设备被钉死在历史版本、新旧资源混杂（主题"停留在上上一个颜色"事件的真凶，多轮修复未完整到达设备）。v2 起静态资源 stale-while-revalidate 且后台刷新 `fetch(req,{cache:"no-cache"})` 穿透 HTTP 缓存。**任何"用户侧行为与代码不符/时好时坏"先怀疑缓存层**
-14. WebKit 的 chrome tint（状态栏/底部工具栏）对动态 meta theme-color 懒更新且可能丢失 → applyChrome() 跨帧双写重申；iOS 浅色系统外观下 Safari 会拒绝深色 theme-color（平台规矩，color-scheme meta 可改善不保证）；iOS PWA 在添加到主屏时**固化 manifest**，改 manifest 需删图标重加
+14. WebKit 的 chrome tint（状态栏/底部工具栏）对动态 meta theme-color 懒更新且可能丢失 → applyChrome() 跨帧双写重申；iOS 浅色系统外观下 Safari 会拒绝深色 theme-color（平台规矩，color-scheme meta 可改善不保证）；iOS PWA 在添加到主屏时**固化 manifest 与 apple-mobile-web-app-* meta**（含 statusBarStyle），改了必须删图标重加；standalone 状态栏不跟动态 meta theme-color，唯一根治 = black-translucent + viewport-fit:cover 透明状态栏（页面背景直接透出），已实施并配套 safe-area padding（chat 根/VoiceMode/Sidebar/Assistant 抽屉/Settings 底 sheet）。**风险待真机**：black-translucent 下状态栏文字颜色行为按 iOS 版本（可能固定白），浅色主题下若不可读，备选方案是 safe-area 区域画自适应 scrim
 
 ## 5. 待 Mira 真机验证（按推送顺序，均未收到"可以了"）
 
