@@ -66,7 +66,6 @@ export default function AssistantManager({ assistants, isOpen, onClose, onRefres
       <div style={{
         position: "fixed", top: 0, right: 0, bottom: 0,
         width: "min(420px, 90vw)",
-        paddingTop: "env(safe-area-inset-top)",
         background: "var(--bg-secondary)",
         borderLeft: "1px solid var(--border-subtle)",
         zIndex: 210,

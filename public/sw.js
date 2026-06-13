@@ -1,4 +1,4 @@
-const CACHE_NAME = "chat-v2"; // bumped: v1 pinned stale assets forever
+const CACHE_NAME = "chat-v3"; // bumped: v1 pinned stale assets forever
 
 // Install: cache shell
 self.addEventListener("install", (event) => {

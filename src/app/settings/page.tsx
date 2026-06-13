@@ -124,12 +124,6 @@ export default function SettingsPage() {
         background: "var(--bg-primary)",
         overflow: "hidden",
         zIndex: 100,
-        // Settings is its own route — the chat root's safe-area padding
-        // doesn't cover it. The absolute page layers inside (inset: 0) sit
-        // against this padding box, so one inset here shields the whole
-        // navigation stack from the transparent status bar.
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       {/* Previous page (visible during back animation) */}

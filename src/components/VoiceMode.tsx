@@ -910,8 +910,6 @@ const VoiceMode = forwardRef<VoiceModeHandle, VoiceModeProps>(function VoiceMode
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "space-between",
-            paddingTop: "env(safe-area-inset-top)",
-            paddingBottom: "env(safe-area-inset-bottom)",
             padding: "calc(24px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom))",
             boxSizing: "border-box",
           }}
