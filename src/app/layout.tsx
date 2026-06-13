@@ -44,8 +44,8 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
           crossOrigin="anonymous"
         />
-        <meta name="theme-color" content="#2b2520" />
-        <meta name="color-scheme" content="dark" />
+        <meta name="theme-color" content="" />
+        <meta name="color-scheme" content="" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var bars={dark:"#2b2520",light:"#f5f0eb",sage:"#eef1e9",lavender:"#f0edf5",ocean:"#20272f",plum:"#2b232c"};var schemes={dark:"dark",light:"light",sage:"light",lavender:"light",ocean:"dark",plum:"dark"};var mq=window.matchMedia("(prefers-color-scheme:dark)");function res(){var t=localStorage.getItem("color-mode")||"dark";return t==="system"?(mq.matches?"dark":"light"):t}function setMetas(){var r=res();var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",bars[r]||bars.dark);var s=document.querySelector('meta[name="color-scheme"]');if(s)s.setAttribute("content",schemes[r]||"dark")}var t0=localStorage.getItem("color-mode")||"dark";document.documentElement.setAttribute("data-theme",t0);setMetas();function onSys(){setMetas();document.documentElement.style.backgroundColor=bars[res()]||bars.dark}if(mq.addEventListener){mq.addEventListener("change",onSys)}else if(mq.addListener){mq.addListener(onSys)}}catch(e){document.documentElement.setAttribute("data-theme","dark")}})();if("serviceWorker"in navigator){navigator.serviceWorker.register("/sw.js").catch(function(){})}`,
