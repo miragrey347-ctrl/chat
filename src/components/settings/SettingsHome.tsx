@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import type { NavContext } from "@/app/settings/page";
 import { useLocale } from "@/lib/i18n";
-import { THEME_BAR, THEME_SWATCH, THEME_SCHEME, applyChrome } from "@/lib/themeColors";
+import { THEME_SWATCH } from "@/lib/themeColors";
 
 interface SettingsHomeProps {
   nav: NavContext;
@@ -197,13 +197,6 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
     setCurrentTheme(value);
     localStorage.setItem("color-mode", value);
     document.documentElement.setAttribute("data-theme", value);
-    // 同步更新 PWA 状态栏颜色
-    const resolved = value === "system"
-      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-      : value;
-    // Inline root background + meta swap, re-asserted across frames —
-    // WebKit's safe-area extension and chrome tints update lazily.
-    applyChrome(THEME_BAR[resolved] || THEME_BAR.dark, THEME_SCHEME[resolved] || "dark");
     setShowThemePicker(false);
   };
 
