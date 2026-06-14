@@ -11,7 +11,12 @@ import { THEME_BAR, THEME_SCHEME, resolveTheme, applyChrome } from "@/lib/themeC
 export default function ThemeGuard() {
   useEffect(() => {
     try {
-      const t = localStorage.getItem("color-mode") || "dark";
+      let t = localStorage.getItem("color-mode") || "dark";
+      // Migrate removed custom themes back to dark
+      if (t !== "system" && t !== "dark" && t !== "light") {
+        t = "dark";
+        localStorage.setItem("color-mode", "dark");
+      }
       document.documentElement.setAttribute("data-theme", t);
       const r = resolveTheme(t, window.matchMedia("(prefers-color-scheme: dark)").matches);
       applyChrome(THEME_BAR[r] || THEME_BAR.dark, THEME_SCHEME[r] || "dark");

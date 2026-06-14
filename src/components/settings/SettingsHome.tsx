@@ -185,7 +185,6 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
 
   const themeLabels: Record<string, string> = {
     dark: t("dark"), light: t("light"), system: t("followSystem"),
-    sage: t("themeSage"), lavender: t("themeLavender"), ocean: t("themeOcean"), plum: t("themePlum"),
   };
 
 
@@ -350,7 +349,7 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
           >
             {t("colorModeTitle")}
           </h3>
-          {(["system", "dark", "light", "sage", "lavender", "ocean", "plum"] as const).map((themeKey) => (
+          {(["system", "dark", "light"] as const).map((themeKey) => (
             <button
               key={themeKey}
               onClick={() => applyTheme(themeKey)}
