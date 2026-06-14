@@ -1,25 +1,33 @@
-# Aethera 主交接文档（2026-06-12 窗口收尾版）
+# Aethera 交接文档（2026-06-14 窗口收尾版）
 
-> 给下个窗口的我：读完本文档即可接手。专题历史见 HANDOVER_VOICE.md / HANDOVER_VOICE_ORB.md（已被本文档吸收，不必读）。
+> 给下个窗口的我：读完本文档即可接手。
 
 ## 0. 环境与工作方式（不变项）
 
 - 仓库 `miragrey347-ctrl/chat`（public）→ Vercel 自动部署 `chat-pi-nine-39.vercel.app`
-- 沙箱 `/home/claude/chat-app`；沙箱会被重置，丢了就 `git clone --depth 30`
+- 沙箱 `/home/claude/chat-app`；会被重置，丢了就 `git clone --depth 30`
 - OpenRouter key 在 Vercel 服务端 env `OPENROUTER_API_KEY`，前端永不传 key
-- Mira 只有 iPhone/iPad。Git 全由 Claude 操作；token 嵌 remote URL，**不清理**（本窗口的 token 已在 remote 里，可能仍有效，先试 push 再要新的）
-- 验证流程：`npx tsc --noEmit` 0 错；行为性改动追加完整 build：`next.config.ts` 临时加 `turbopack: { root: "." }` → `npx next build` → 看到 `✓ Compiled successfully` **和** `Finished TypeScript` 两个标志 → 恢复 config（末尾 `supabaseUrl is required` 是沙箱无 env，忽略）
-- 中文字符串改动用 python3 全文替换（sed 会坏）；大文件重写用 `cat > file << 'ENDOFFILE'`
+- Mira 只有 iPhone/iPad。Git 全由 Claude 操作；token 嵌 remote URL，**不清理**
+- 验证流程：`npx tsc --noEmit` 0 错；行为改动追加完整 build：`next.config.ts` 临时加 `turbopack: { root: "." }` → `npx next build` → 看到 `✓ Compiled successfully` **和** `Finished TypeScript` → 恢复 config（`supabaseUrl is required` 是沙箱无 env，忽略）
+- 中文字符串改动用 python3 全文替换（sed 坏中文）；大文件重写用 `cat > file << 'ENDOFFILE'`
 - 改动画/几何参数前先 PIL 离线渲染自检；对照 GPT 动画用 ffmpeg 逐帧 tile
-- Mira 反馈风格：截图/录屏 + 短句；"可以了/没问题了"=通过，"还是有/还是不行"=继续修。一次推进一个事项
 
 ## 1. 应用速览
 
 Next.js 16 App Router + TypeScript PWA；Supabase（表：assistants / conversations / messages / user_models / assistant_memories / global_memories / conversation_summaries）；OpenRouter（chat + STT + TTS）；Serper 搜索。
-关键文件：`src/app/chat/page.tsx`（主聊天，流式、搜索注入、导出）、`src/components/VoiceMode.tsx`（全屏语音，核心文件）、`src/lib/voice.ts`（语音工具）、`src/lib/i18n.ts`（"use client" 词典 + useLocale，扁平 key → {zh,en}）、`src/app/globals.css`（语音球全部布局）。
-iPad/iOS Safari 上 Tailwind 不可靠：关键尺寸一律 inline style + WebkitAppearance:none。
 
-## 2. 语音系统现状（全部已上线）
+关键文件：
+- `src/app/chat/page.tsx` — 主聊天（流式、搜索注入、导出、barge-in 截断）
+- `src/components/VoiceMode.tsx` — 全屏语音（核心文件，~900 行）
+- `src/lib/voice.ts` — 语音工具（STT/TTS/格式检测）
+- `src/lib/i18n.ts` — "use client" 词典，扁平 key → {zh,en}
+- `src/lib/themeColors.ts` — 主题色表（THEME_BAR/SWATCH/SCHEME + applyChrome）
+- `src/components/ThemeGuard.tsx` — 挂载后重申主题（防运行时属性丢失）
+- `src/app/globals.css` — 语音球布局 + 全部主题 CSS 变量块
+- `public/sw.js` — Service Worker v3（stale-while-revalidate）
+- `public/manifest.json` — PWA 清单
+
+## 2. 语音系统
 
 ### 链路
 - STT `/api/stt`：OpenRouter transcriptions，base64 JSON（m4a/webm），默认 `openai/gpt-4o-mini-transcribe`，网络错误重试一次
@@ -27,68 +35,123 @@ iPad/iOS Safari 上 Tailwind 不可靠：关键尺寸一律 inline style + Webki
 - 听写：ChatInput 麦克风 = MediaRecorder → /api/stt → 填输入框
 
 ### VoiceMode 状态机
-idle / listening / transcribing / thinking / speaking（stateRef 同步镜像）。VAD：RMS 阈值 0.022、静音 1400ms 断句、MIN_SPEECH 400ms、MIN_BLOB 2000B。播放走共享 AudioContext 的 BufferSource（**绝不能用 `<audio>`**）。句子级流式 TTS：liveText → streamSafeClean →harvest 切句（首句 ≥14 字符逗号软切）→ enqueueSegment 并行合成（**并发闸门 ≤3 + 失败重试一次**，2026-06-12 加；**<12 字符短句不单独成段**，攒入 pendingSegRef 与下句合并——生成式 TTS 短输入音色失锚会变性别，cc24019）→ pump 按 slot 保序播放 → drain 且 llmDone → 回 listening。turnIdRef 世代计数器作废在途异步；sendMessageRef 桥接防陈旧闭包；pendingSendRef 防并发发送。字幕跟语音（每段开播才上屏）。
+idle / listening / transcribing / thinking / speaking（stateRef 同步镜像）。
 
-### barge-in 插话打断（2026-06-12，commit 2953d62）
-speaking 期间半开麦：新检测循环读 VAD 同一个 analyser，RMS > 0.045（普通阈值 2 倍）持续 250ms → abortSpeech + startListening。回声防线 = iOS AEC（echoCancellation 一直开）+ 双倍阈值 + 持续时间门，参数保守（宁可要用户大声，绝不自我打断）。配套：liveText effect 有状态守卫（thinking/speaking 之外不 harvest——否则打断后旧 LLM 流借实时 turnId 把旧文偷渡进新队列）；startListening 有 listening 态防重入（barge 与 drain 竞态）。第一版限制：句首 ~250ms 损耗；thinking 期间不可打断（Mira 明确不做）。打断经 onBargeIn(spokenSoFar) prop 通知 page：abort 仍在跑的流（**注意：文本流通常比 TTS 播放早结束几十秒，abort 几乎总是摸空，截断才是主菜**）+ 把最后一条 assistant **截断为用户实际听到的文本**（内存 setMessages + PATCH /api/messages upsert：DB 最后一条是 assistant 则 update，否则 insert——覆盖流已 finalize 与流被 abort 两种场景）。竞态守卫：page 的 bargedRef 在打断时置位让 finalize 跳过（防截断版被完整版覆盖回去），handleSend 开头复位。spokenText 经 spokenTextRef 镜像供长生命周期回调读取（教训 #4）。**挂断刻意不触发**——离开语音模式让回复跑完，打断才意味着不要这条回复。
+**VAD**：RMS 阈值 0.022、静音 1400ms 断句、MIN_SPEECH 400ms、MIN_BLOB 2000B。
 
-### 音频自愈（2026-06-12 修复包，commit 888b7ce）
-iOS 随时可能 interrupt 共享 context（通知/Siri/来电），原代码无自愈 → VAD 死（症状：必须点球手动断句；MediaRecorder 不经此 context 所以转写仍正常）。四层防御：
+**播放**：共享 AudioContext 的 BufferSource（**绝不能用 `<audio>`**——会 interrupt context 杀死 VAD）。
+
+**句子级流式 TTS**：liveText → streamSafeClean → harvest 切句（首句 ≥14 字符逗号软切）→ enqueueSegment 并行合成（并发闸门 ≤3 + 失败重试一次）→ pump 按 slot 保序播放 → drain 且 llmDone → 回 listening。**短句合并**：<12 字符的句子不单独成段，攒入 pendingSegRef 与下句合并（生成式 TTS 短输入音色失锚会变性别，cc24019）。turnIdRef 世代计数器作废在途异步；sendMessageRef 桥接防陈旧闭包。字幕跟语音（每段开播才上屏）。
+
+### 音频自愈（888b7ce）
+iOS 随时可能 interrupt 共享 context（通知/Siri/来电），四层防御：
 1. vadLoop 每帧查 `ctx.state !== "running"` → resume
-2. startListening 复用分支：800ms 超时 await resume → 仍不行**重建整个 audio graph**（mic stream 挺得过打断；pump 里有 `analyser.context !== ctx` 换代检查）
-3. pump 每段播放配 `buf.duration+1.5s` 看门狗（冻结 context 下 onended 失踪会卡死管线）
-4. TTS 并发闸门 + 重试（治长回复尾段限流静音）
+2. startListening 复用分支：800ms 超时 await resume → 仍不行重建整个 audio graph
+3. pump 每段播放配 `buf.duration+1.5s` 看门狗（冻结 context 下 onended 失踪）
+4. TTS 并发闸门 + 重试
 
-### 语音球三态动画（GPT 逐帧逆向）
-DOM：`stage > .voice-cloud-spin[spinRef]{ blob-1..6（wrapper 管 morph 布局 CSS transition / core 管持续动画）} + .voice-think-bubble`。颜色纯 `var(--accent)`。
-- **listening**：六 blob 叠成单球呼吸；bubble 藏球内 `translate(-18,16) scale(.45)`（进 thinking 从球缘"钻出"，回来被吸回）
-- **thinking**：不对称五瓣菜花云；JS rAF 旋转 -45°/s（spin 容器 CSS animation 在 iOS 静默失效）；同循环驱动**花瓣径向浮动**（视觉 ±3px、每瓣独立周期 0.92~1.31s、scale 0.96±0.04，按 5x 慢速 GPT 录屏逐帧校准）+ **小圆**径向 ±5px、scale 1±0.10、方位锁定不公转（GPT 实测 ±1.5°）。退出清 core inline transform
-- **thinking→speaking**：**squash 中间态 220ms**（commit b617140）——云压成带鼓包的水平条再 0.32s 回弹分裂四豆；进 squash 瞬间旋转角就近跳 72° 倍数（五瓣近似对称，跳变藏在塌缩里）剩 ≤36° 随压扁转平；EQ 经 squashRef 同步 ref 延迟启动避免抢跑
-- **speaking**：四颗**定宽变高真胶囊**（commit dd236db）——EQ 写 `height`%（非 scaleY！scaleY 把圆拉成椭圆），core `border-radius:9999px`，H=W 时退化正圆所以静止/morph 零变化；wrapper flex 居中 + core flex:none；四豆 scale 0.44 间距 3.6px；播放 analyser 4 频段驱动
+### Barge-in 插话打断（2953d62 + 3140798）
+speaking 期间半开麦：RMS > 0.045（普通阈值 2 倍）持续 250ms → abortSpeech + onBargeIn(spokenSoFar) + startListening。
 
-## 3. i18n（2026-06-12 两轮清理）
+**打断时做三件事**：
+1. abort 仍在跑的 LLM 流（文本流通常比 TTS 播放早结束几十秒，abort 几乎总摸空）
+2. 聊天记录截断为用户实际听到的文本（spokenTextRef 镜像、内存 setMessages）
+3. PATCH /api/messages upsert 截断版到 DB（最后一条是 assistant 则 update，否则 insert）
 
-- 组件层硬编码中文已清零（51afde2）：VoiceService、AssistantManager 全组件接入（**注意它有两个组件**：AssistantManager 和 AssistantForm，各自要 `const { t } = useLocale()`）、零散按钮
-- 深水区（524bcb2）：对话默认标题由客户端传 `t("untitledConversation")`；`/api/summaries` 接 `locale` 生成对应语言摘要；导出 md/txt 标签走词典；setup 页文案双语
-- **白名单（刻意保留的中文，别"修"它们）**：语言自名（中文/日本語/简体中文）；记忆存储格式 `[文件:...]`（改了坏已存数据解析）；LLM 上下文标记（[搜索结果]/[全局记忆]/对话（日期）：/来源:/搜索指令）；SQL 注释与 DB 默认值（'新对话'/'默认助手'）；parse-file route（**死接口**，无人调用）；search route 错误（无用户可见路径）；summaries 双语分支内的中文字面量
+竞态守卫：bargedRef 让 finalize 跳过（防截断版被完整版覆盖），handleSend 开头复位。**挂断刻意不触发**——离开语音模式让回复跑完。
 
-### 主题系统（2026-06-12）
-color-mode localStorage（system/dark/light/sage/lavender/ocean/plum）→ data-theme 属性 → globals.css 每主题 19 变量一块。四处必须同步：globals.css 主题块（选择器用 html[data-theme=x] 压过 :root 兜底）、layout.tsx 内联脚本的 bars/schemes 查表、src/lib/themeColors.ts（THEME_BAR/SWATCH/SCHEME + applyChrome）、SettingsHome 选项数组与 themeLabels（i18n key）。ThemeGuard 组件挂载后重申主题（防运行时抹属性）。新增主题照抄四件套即可。浅色系以 light（香槟）为对比度模板，深色系以 dark（摩卡）为模板，只旋转色相。
+### 语音球三态动画
+DOM：`stage > .voice-cloud-spin[spinRef]{ blob-1..6 } + .voice-think-bubble`。颜色纯 `var(--accent)`。
 
-## 4. 踩坑记录（必读）
+- **listening**：六 blob 叠成单球呼吸；bubble 藏球内 `translate(-18,16) scale(.45)`
+- **thinking**：不对称五瓣菜花云；JS rAF 旋转 -45°/s；花瓣径向浮动（±3px、每瓣独立周期 0.92~1.31s）+ 小圆径向 ±5px、scale 1±0.10
+- **thinking→speaking**：squash 中间态 220ms——云压成水平条再 0.32s 分裂四豆；旋转角就近跳 72° 倍数
+- **speaking**：四颗定宽变高真胶囊——EQ 写 `height`%（非 scaleY），core `border-radius:9999px`
+
+## 3. 主题系统
+
+七个主题：system / dark / light / sage / lavender / ocean / plum。
+
+**四处必须同步**（新增主题照抄）：
+1. `globals.css` 主题块（选择器用 `html[data-theme=x]` 压过 `:root` 兜底）
+2. `layout.tsx` 内联脚本的 `bars` / `schemes` 查表
+3. `src/lib/themeColors.ts`（THEME_BAR/SWATCH/SCHEME + applyChrome）
+4. `SettingsHome.tsx` 选项数组与 themeLabels（i18n key）
+
+**ThemeGuard** 组件在 React 树挂载后重申主题（防运行时抹属性）。`applyChrome()` 跨帧双写 meta theme-color/color-scheme + html inline 背景。
+
+### PWA 状态栏已知限制（本窗口踩完的坑）
+- iOS PWA 安装时**固化** manifest 的 theme_color/background_color 和 apple-mobile-web-app-status-bar-style，改代码后必须删图标重装
+- PWA 状态栏**不跟随动态 meta theme-color**，只认安装时的固化值
+- 尝试过 black-translucent 透明方案（页面背景透出，动态跟随），效果好但 safe-area 适配 + SW 缓存阻止新代码到达设备，已**回退到 statusBarStyle "default"**
+- 当前 manifest: theme_color/background_color 均为 `#f5f0eb`（浅色），这是之前一直正常使用的配置
+- **Mira 的 iPhone PWA 状态栏目前仍显示深色**——可能是旧的固化值残留。建议她在 iPhone 设置 → Safari → 高级 → 网站数据 里删除 `chat-pi-nine-39` 的全部数据，然后删图标重装。如果仍不行，这是 iOS 平台限制，接受它
+
+### 网页版切换主题时的 Safari tint 残留
+Safari 的安全区延伸色（状态栏/底部工具栏后面）对动态 CSS 变量变化更新**懒且不可靠**——切主题时偶尔上边或下边停留在旧色，刷新即正常。applyChrome 已做跨帧重申（rAF×2 + setTimeout 250ms）尽力而为，剩余是 WebKit 渲染层的平台怪癖。
+
+## 4. i18n
+
+- 组件层硬编码中文已清零（51afde2）：VoiceService、AssistantManager 全组件接入（**注意 AssistantManager 有两个组件**：AssistantManager 和 AssistantForm，各自要 `const { t } = useLocale()`）
+- 深水区（524bcb2）：对话默认标题由客户端传 `t("untitledConversation")`；`/api/summaries` 接 `locale` 参数生成对应语言摘要；导出 md/txt 标签走词典；setup 页双语
+- **白名单**（刻意保留，别"修"）：语言自名（中文/日本語）；记忆存储格式 `[文件:...]`；LLM 上下文标记（[搜索结果]/[全局记忆] 等）；SQL 默认值；summaries 双语分支内字面量
+
+## 5. Service Worker（public/sw.js）
+
+**重大教训**：Turbopack chunk 文件名**不含内容哈希**（同 URL 跨部署内容会变）。v1 的 cache-first 把用户设备钉死在历史版本——本窗口多轮修复因此未完整到达 Mira 的设备。
+
+当前 v3：navigation network-first；静态资源 stale-while-revalidate + `fetch(req, { cache: "no-cache" })` 穿透 HTTP 缓存；install 时 skipWaiting + activate 时 clients.claim + 清旧缓存。注册加了 `updateViaCache: 'none'`。
+
+**任何"用户侧行为与代码不符 / 时好时坏"先怀疑 SW 缓存层。**
+
+## 6. 踩坑记录
 
 1. iOS `<audio>` 播放 interrupt 共享 AudioContext → VAD 死。播放必须同 context BufferSource
-2. absolute+inset:0 容器上的 CSS transform animation 在 iOS Safari 静默不执行 → 这类一律 JS rAF
+2. absolute+inset:0 容器上的 CSS transform animation 在 iOS Safari 静默不执行 → 一律 JS rAF
 3. 对称图形旋转不可见；不对称性是旋转可见的前提
 4. recorder.onstop 等长生命周期回调闭包会陈旧 → ref 桥接
-5. 改动画/几何参数前先 PIL 离线自检多个相位
-6. 逐帧分析：`ffmpeg -ss <t> -t <dur> -i video -vf "fps=N,crop=WxH:x:y,scale=200:-1,tile=CxR" -frames:v 1 out.png`；慢速视频用云转速（真实 45°/s）自校准倍率
-7. liveText：流式期间 page.tsx 实时更新最后一条 assistant content
-8. **scaleY 拉圆 = 椭圆**；真胶囊 = 定宽 + JS 驱 height + radius 9999px（H=W 退化为圆）
-9. CSS animation 覆盖 inline transform：JS 接管的元素必须删掉同属性 CSS 动画（voicePetalPulse/voiceCloudDrift 血案）
-10. iOS context interrupted 无自愈是系统性风险：任何长期 Web Audio 链路都要带 state 看门狗
-11. effect 顺序依赖：squash 编排 effect 必须声明在 spin effect 之后（覆盖其 cleanup 的回正）、EQ 之前（squashRef 先置位）
-12. 多个 `}, [vstate]);` 同文歧义 → 按行号 python 精准改
-13. **SW 缓存陷阱（重大）**：Turbopack chunk 文件名**不含内容哈希**（同 URL 跨部署内容会变，实验验证：改 CSS 重 build 文件名不变）。sw.js v1 对 js/css cache-first 零失效 → 用户设备被钉死在历史版本、新旧资源混杂（主题"停留在上上一个颜色"事件的真凶，多轮修复未完整到达设备）。v2 起静态资源 stale-while-revalidate 且后台刷新 `fetch(req,{cache:"no-cache"})` 穿透 HTTP 缓存。**任何"用户侧行为与代码不符/时好时坏"先怀疑缓存层**
-14. WebKit 的 chrome tint（状态栏/底部工具栏）对动态 meta theme-color 懒更新且可能丢失 → applyChrome() 跨帧双写重申；iOS 浅色系统外观下 Safari 会拒绝深色 theme-color（平台规矩，color-scheme meta 可改善不保证）；iOS PWA 在添加到主屏时**固化 manifest 与 apple-mobile-web-app-* meta**（含 statusBarStyle），改了必须删图标重加；standalone 状态栏不跟动态 meta theme-color，唯一根治 = black-translucent + viewport-fit:cover 透明状态栏（页面背景直接透出），已实施并配套 safe-area padding（chat 根/VoiceMode/Sidebar/Assistant 抽屉/Settings 底 sheet）。**风险待真机**：black-translucent 下状态栏文字颜色行为按 iOS 版本（可能固定白），浅色主题下若不可读，备选方案是 safe-area 区域画自适应 scrim
+5. 改动画参数前先 PIL 离线自检多个相位
+6. scaleY 拉圆 = 椭圆；真胶囊 = 定宽 + JS 驱 height + radius 9999px
+7. CSS animation 覆盖 inline transform：JS 接管的元素必须删掉同属性 CSS 动画
+8. iOS context interrupted 无自愈是系统性风险：任何长期 Web Audio 链路都要带 state 看门狗
+9. 多个 `}, [vstate]);` 同文歧义 → 按行号 python 精准改
+10. **SW 缓存陷阱**：Turbopack chunk 不含内容哈希 + cache-first = 新旧混搭。"停留在上上一个颜色"事件的真凶
+11. WebKit chrome tint 懒更新 → applyChrome 跨帧双写；iOS 浅色系统下 Safari 可能拒绝深色 theme-color
+12. iOS PWA 固化 manifest 和 status-bar-style → 改了必须删数据+删图标+重装
+13. 生成式 TTS 短输入音色失锚（变性别）→ <12 字符合并下一句
 
-## 5. 待 Mira 真机验证（按推送顺序，均未收到"可以了"）
+## 7. 待办池
 
-- 2a6f90e 花瓣浮动 + b617140 squash + dd236db 胶囊：已验证通过（2026-06-12 "其它地方也没啥问题了"）
-- 51afde2/524bcb2 i18n → English 界面 Voice 设置页、助手弹窗、导出文件（已验证通过 2026-06-12）
-- 888b7ce 音频自愈（已验证通过：铃声打断后自愈、VAD 不误触）
-- 2953d62 barge-in：已验证通过（2026-06-12）
-- cc24019 短句合并防变声：已验证通过（2026-06-12）——若日后长段**中途**仍偶发变声，那是 Eleven v3 段内漂移，建议切 Multilingual v2
-
-## 6. 待办池
-
-- barge-in 调参：真机若"喊不停"降 BARGE_RMS_THRESHOLD，若自我打断升之；thinking 期间打断未做
-- VAD 阈值 0.022 / SILENCE 1400ms 按真机反馈调
-- 服务端 search/parse-file 文案（目前无可见路径，若 parse-file 复活再翻）
+- **Mira iPhone PWA 状态栏深色残留**：建议清 Safari 网站数据 + 删图标重装。若仍不行就是平台限制
+- barge-in 调参：真机若"喊不停"降 BARGE_RMS_THRESHOLD（0.045），若自我打断升之
+- thinking 期间打断：Mira 明确说不做
+- 打断后半截内容落库（目前与 Esc 停止生成行为一致，不落库刷新即丢）
 - 摘要若做展示 UI，locale 链路已就绪
 
-## 7. 本窗口 commit 链（main，全部已部署）
+## 8. 本窗口 commit 链（main，全部已部署）
 
-13d18dd→2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）→ b617140 液滴出生/吸回 + squash 压扁分裂 morph → dd236db 真胶囊（height 驱动）+ 间距收紧 → 888b7ce 音频自愈四层防御 + TTS 闸门 → 51afde2 组件层 i18n 清零 → 524bcb2 i18n 深水区（标题/摘要/导出/setup）→ 0cb9e13 本文档 → 2953d62 barge-in 插话打断 → cc24019 短句合并防 TTS 变声 → barge-in 截断聊天记录至已听到位置（含 PATCH /api/messages）→ 四个自定义颜色主题 → 主题稳定性三层防御 + color-scheme meta → **SW v2 缓存修复（关键）**。**本窗口全部改动均经 Mira 真机验证通过。**
+```
+2a6f90e 花瓣径向浮动（GPT 慢速录屏逐帧校准）
+b617140 液滴出生/吸回 + squash 压扁分裂 morph
+dd236db 真胶囊（height 驱动）
+888b7ce 音频自愈四层防御 + TTS 闸门
+51afde2 组件层 i18n 清零
+524bcb2 i18n 深水区（标题/摘要/导出/setup）
+2953d62 barge-in 插话打断
+cc24019 短句合并防 TTS 变声
+3140798 barge-in 截断聊天记录 + PATCH /api/messages
+2e72e2f barge-in abort 旧 LLM 流
+70908cb 四个自定义颜色主题
+b404946~d9862c9 主题稳定性三层防御
+ca0a07d SW v2 缓存修复
+3c64410 color-scheme meta 同步
+27b94af 透明状态栏 + safe-area（已回退）
+2ee5eda 回退透明状态栏 + SW v3
+7460c25 meta 初始值清空 + SW updateViaCache
+9456f16 manifest 恢复浅色
+```
 
-— 2026-06-12 的我，交棒 🍵
+**已验证通过**：花瓣浮动、squash morph、胶囊、音频自愈、i18n、barge-in 全链路（含截断）、短句合并、四个主题色（内容区）。
+**未完全解决**：iPhone PWA 状态栏深色残留（疑 iOS 固化值 + SW 阻断）。
+
+— 2026-06-14 的我，交棒 🍵
