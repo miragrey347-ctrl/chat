@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { applyChrome, normalizeTheme } from "@/lib/themeColors";
+import { applyChrome, disableStaleChromeLayers, normalizeTheme } from "@/lib/themeColors";
 
 // Re-assert the stored theme after hydration and when Safari resumes the page.
 export default function ThemeGuard() {
@@ -24,6 +24,7 @@ export default function ThemeGuard() {
       if (document.visibilityState === "visible") reapply();
     };
 
+    disableStaleChromeLayers();
     reapply();
     window.__aetheraApplyChrome = applyChrome;
 

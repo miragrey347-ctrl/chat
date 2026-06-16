@@ -25,6 +25,12 @@ const VALID_THEME_KEYS: Record<string, true> = {
   light: true,
 };
 
+const STALE_CHROME_STYLE_ID = "__aethera_disable_stale_chrome_layers";
+const STALE_CHROME_PROBE_IDS = [
+  "__aethera_chrome_probe_top",
+  "__aethera_chrome_probe_bottom",
+];
+
 declare global {
   interface Window {
     __aetheraApplyChrome?: (theme?: string) => void;
@@ -67,7 +73,36 @@ function setSingleMeta(name: string, content: string) {
   return meta;
 }
 
+export function disableStaleChromeLayers() {
+  if (typeof document === "undefined") return;
+
+  let style = document.getElementById(STALE_CHROME_STYLE_ID) as HTMLStyleElement | null;
+  if (!style) {
+    style = document.createElement("style");
+    style.id = STALE_CHROME_STYLE_ID;
+    style.textContent = `
+html::before, html::after, body::before, body::after {
+  content: none !important;
+  display: none !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+#${STALE_CHROME_PROBE_IDS[0]}, #${STALE_CHROME_PROBE_IDS[1]} {
+  display: none !important;
+  pointer-events: none !important;
+}
+`;
+    document.head.prepend(style);
+  }
+
+  for (const id of STALE_CHROME_PROBE_IDS) {
+    document.getElementById(id)?.remove();
+  }
+}
+
 function writeChrome(theme: ThemeKey) {
+  disableStaleChromeLayers();
+
   const resolved = resolveTheme(theme);
   const barColor = THEME_BAR[resolved];
   const scheme = THEME_SCHEME[resolved];
