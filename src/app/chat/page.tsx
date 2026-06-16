@@ -2,7 +2,6 @@
 import { useLocale } from "@/lib/i18n";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import type { Attachment } from "@/components/ChatInput";
@@ -19,7 +18,6 @@ function generateId() {
 }
 
 export default function ChatPage() {
-  const router = useRouter();
   const displaySettings = useDisplaySettings();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
@@ -51,6 +49,10 @@ export default function ChatPage() {
   const prevConvIdRef = useRef<string | null>(null);
   const imageDataRef = useRef<Record<string, string[]>>({});
   const searchSourcesRef = useRef<Record<string, Array<{ title: string; snippet: string; url: string }>>>({});
+
+  const openSettings = useCallback(() => {
+    window.location.assign("/settings");
+  }, []);
 
   // Load conversations and assistants on mount
   useEffect(() => {
@@ -1200,7 +1202,7 @@ export default function ChatPage() {
       // Cmd/Ctrl + Shift + S: Open settings
       if (meta && e.shiftKey && e.key === "s") {
         e.preventDefault();
-        router.push("/settings");
+        openSettings();
         return;
       }
 
@@ -1341,7 +1343,7 @@ export default function ChatPage() {
             </button>
           )}
           <button
-            onClick={() => router.push("/settings")}
+            onClick={openSettings}
             style={{
               background: "none",
               border: "none",

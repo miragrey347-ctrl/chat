@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import SettingsHome from "@/components/settings/SettingsHome";
 import DisplaySettings from "@/components/settings/DisplaySettings";
 import AssistantList from "@/components/settings/AssistantList";
@@ -28,7 +27,6 @@ export interface NavContext {
 }
 
 export default function SettingsPage() {
-  const router = useRouter();
   const [navStack, setNavStack] = useState<NavPage[]>([
     { id: "home", title: "Settings" },
   ]);
@@ -52,7 +50,7 @@ export default function SettingsPage() {
   const pop = useCallback(() => {
     if (isAnimating || navStack.length <= 1) {
       // If at root, go back to chat
-      if (navStack.length <= 1) router.push("/chat");
+      if (navStack.length <= 1) window.location.assign("/chat");
       return;
     }
     setAnimDir("back");
@@ -62,7 +60,7 @@ export default function SettingsPage() {
       setAnimDir(null);
       setIsAnimating(false);
     }, 280);
-  }, [isAnimating, navStack.length, router]);
+  }, [isAnimating, navStack.length]);
 
   const replace = useCallback((page: NavPage) => {
     setNavStack((s) => [...s.slice(0, -1), page]);
