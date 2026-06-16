@@ -86,30 +86,6 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  background: var(--browser-chrome-bg, var(--bg-primary));
-  pointer-events: none;
-  z-index: 2147483647;
-  transform: translateZ(0);
-  will-change: background-color, transform;
-  contain: paint;
-}
-
-body::before {
-  top: 0;
-  height: max(env(safe-area-inset-top, 0px), 1px);
-}
-
-body::after {
-  bottom: 0;
-  height: max(env(safe-area-inset-bottom, 0px), 1px);
-}
-
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }

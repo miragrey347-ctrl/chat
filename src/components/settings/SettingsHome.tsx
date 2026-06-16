@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import type { NavContext } from "@/app/settings/page";
 import { useLocale } from "@/lib/i18n";
-import { THEME_SWATCH, applyChrome, normalizeTheme, type ThemeKey } from "@/lib/themeColors";
+import { THEME_SWATCH, applyChrome, normalizeTheme, scheduleIOSChromeReload, type ThemeKey } from "@/lib/themeColors";
 
 interface SettingsHomeProps {
   nav: NavContext;
@@ -196,10 +196,12 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
 
   const applyTheme = (value: ThemeKey) => {
     const theme = normalizeTheme(value);
+    const themeChanged = theme !== currentTheme;
     setCurrentTheme(theme);
     localStorage.setItem("color-mode", theme);
     applyChrome(theme);
     setShowThemePicker(false);
+    if (themeChanged) scheduleIOSChromeReload();
   };
 
   return (
