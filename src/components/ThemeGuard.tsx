@@ -1,25 +1,55 @@
 "use client";
 
 import { useEffect } from "react";
+import { applyChrome, normalizeTheme } from "@/lib/themeColors";
 
-// Re-assert the stored theme after React hydration — iOS has been observed
-// wiping data-theme during hydration, falling back to :root dark variables.
-// CSS handles background-color and color-scheme via var(--bg-primary) and
-// the color-scheme property in each theme block, so no meta or inline style
-// manipulation needed.
+// Re-assert the stored theme after hydration and when Safari resumes the page.
 export default function ThemeGuard() {
   useEffect(() => {
-    try {
-      let t = localStorage.getItem("color-mode") || "dark";
-      // Migrate removed custom themes back to dark
-      if (t !== "system" && t !== "dark" && t !== "light") {
-        t = "dark";
-        localStorage.setItem("color-mode", "dark");
+    const readTheme = () => {
+      try {
+        const theme = normalizeTheme(localStorage.getItem("color-mode"));
+        localStorage.setItem("color-mode", theme);
+        return theme;
+      } catch {
+        return "dark";
       }
-      document.documentElement.setAttribute("data-theme", t);
-    } catch {
-      /* never break the app over theming */
+    };
+
+    const reapply = () => applyChrome(readTheme());
+    const reapplyIfSystem = () => {
+      if (readTheme() === "system") reapply();
+    };
+    const reapplyWhenVisible = () => {
+      if (document.visibilityState === "visible") reapply();
+    };
+
+    reapply();
+    window.__aetheraApplyChrome = applyChrome;
+
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    if (media.addEventListener) {
+      media.addEventListener("change", reapplyIfSystem);
+    } else {
+      media.addListener(reapplyIfSystem);
     }
+    window.addEventListener("pageshow", reapply);
+    window.addEventListener("focus", reapply);
+    window.addEventListener("storage", reapply);
+    document.addEventListener("visibilitychange", reapplyWhenVisible);
+
+    return () => {
+      if (media.removeEventListener) {
+        media.removeEventListener("change", reapplyIfSystem);
+      } else {
+        media.removeListener(reapplyIfSystem);
+      }
+      window.removeEventListener("pageshow", reapply);
+      window.removeEventListener("focus", reapply);
+      window.removeEventListener("storage", reapply);
+      document.removeEventListener("visibilitychange", reapplyWhenVisible);
+    };
   }, []);
+
   return null;
 }

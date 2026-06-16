@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import type { NavContext } from "@/app/settings/page";
 import { useLocale } from "@/lib/i18n";
-import { THEME_SWATCH } from "@/lib/themeColors";
+import { THEME_SWATCH, applyChrome, normalizeTheme, type ThemeKey } from "@/lib/themeColors";
 
 interface SettingsHomeProps {
   nav: NavContext;
@@ -178,7 +178,7 @@ function Card({ children }: { children: React.ReactNode }) {
 export default function SettingsHome({ nav }: SettingsHomeProps) {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState("dark");
+  const [currentTheme, setCurrentTheme] = useState<ThemeKey>("dark");
 
   const { locale, setLocale, t } = useLocale();
   const currentLang = locale === "en" ? "English" : "简体中文";
@@ -189,14 +189,16 @@ export default function SettingsHome({ nav }: SettingsHomeProps) {
 
 
   useEffect(() => {
-    const saved = localStorage.getItem("color-mode") || "dark";
+    const saved = normalizeTheme(localStorage.getItem("color-mode"));
     setCurrentTheme(saved);
+    applyChrome(saved);
   }, []);
 
-  const applyTheme = (value: string) => {
-    setCurrentTheme(value);
-    localStorage.setItem("color-mode", value);
-    document.documentElement.setAttribute("data-theme", value);
+  const applyTheme = (value: ThemeKey) => {
+    const theme = normalizeTheme(value);
+    setCurrentTheme(theme);
+    localStorage.setItem("color-mode", theme);
+    applyChrome(theme);
     setShowThemePicker(false);
   };
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "chat-v3"; // bumped: v1 pinned stale assets forever
+const CACHE_NAME = "chat-v4"; // bump when chrome/theme bootstrap changes
 
 // Install: cache shell
 self.addEventListener("install", (event) => {
@@ -30,7 +30,7 @@ self.addEventListener("fetch", (event) => {
   // Navigation: network first, cache fallback (offline)
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: "no-cache" })
         .then((response) => {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
