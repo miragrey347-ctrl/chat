@@ -1,4 +1,4 @@
-const CACHE_NAME = "chat-v4"; // bump when chrome/theme bootstrap changes
+const CACHE_NAME = "chat-v5"; // bump when chrome/theme bootstrap changes
 
 // Install: cache shell
 self.addEventListener("install", (event) => {

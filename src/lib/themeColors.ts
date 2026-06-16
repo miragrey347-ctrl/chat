@@ -25,6 +25,11 @@ const VALID_THEME_KEYS: Record<string, true> = {
   light: true,
 };
 
+const CHROME_PROBE_IDS = {
+  top: "__aethera_chrome_probe_top",
+  bottom: "__aethera_chrome_probe_bottom",
+};
+
 declare global {
   interface Window {
     __aetheraApplyChrome?: (theme?: string) => void;
@@ -67,6 +72,65 @@ function setSingleMeta(name: string, content: string) {
   return meta;
 }
 
+function upsertChromeProbe(edge: "top" | "bottom", barColor: string) {
+  const id = CHROME_PROBE_IDS[edge];
+  let probe = document.getElementById(id);
+
+  if (!probe) {
+    probe = document.createElement("div");
+    probe.id = id;
+    probe.setAttribute("aria-hidden", "true");
+    document.body?.appendChild(probe);
+  }
+
+  const insetName = edge === "top" ? "safe-area-inset-top" : "safe-area-inset-bottom";
+  Object.assign(probe.style, {
+    position: "fixed",
+    left: "0",
+    right: "0",
+    top: edge === "top" ? "0" : "",
+    bottom: edge === "bottom" ? "0" : "",
+    height: `max(env(${insetName}, 0px), 1px)`,
+    backgroundColor: barColor,
+    pointerEvents: "none",
+    zIndex: "2147483647",
+    opacity: "1",
+    transform: "translateZ(0)",
+    willChange: "background-color, opacity, transform",
+    contain: "paint",
+  });
+
+  return probe;
+}
+
+function refreshChromeProbes(barColor: string) {
+  if (!document.body) return;
+
+  const probes = [
+    upsertChromeProbe("top", barColor),
+    upsertChromeProbe("bottom", barColor),
+  ];
+
+  // iOS Safari sometimes keeps the browser toolbar tinted from the previous
+  // composited edge pixels. Toggling a fixed edge pixel nudges WebKit to
+  // resample without visibly covering the app.
+  const tick = Date.now().toString(36);
+  document.body.dataset.aetheraChromeTick = tick;
+
+  for (const probe of probes) {
+    probe.style.backgroundColor = barColor;
+    probe.style.opacity = "0.999";
+    probe.style.transform = `translateZ(0) scaleY(${tick.endsWith("0") ? "1.001" : "1"})`;
+  }
+
+  requestAnimationFrame(() => {
+    for (const probe of probes) {
+      probe.style.opacity = "1";
+      probe.style.transform = "translateZ(0)";
+    }
+  });
+}
+
 function writeChrome(theme: ThemeKey) {
   const resolved = resolveTheme(theme);
   const barColor = THEME_BAR[resolved];
@@ -74,10 +138,12 @@ function writeChrome(theme: ThemeKey) {
   const root = document.documentElement;
 
   root.setAttribute("data-theme", theme);
+  root.style.setProperty("--browser-chrome-bg", barColor);
   root.style.backgroundColor = barColor;
   root.style.colorScheme = scheme;
 
   if (document.body) {
+    document.body.style.setProperty("--browser-chrome-bg", barColor);
     document.body.style.backgroundColor = barColor;
     document.body.style.colorScheme = scheme;
   }
@@ -86,6 +152,7 @@ function writeChrome(theme: ThemeKey) {
   setSingleMeta("color-scheme", scheme);
   setSingleMeta("supported-color-schemes", "dark light");
   setSingleMeta("apple-mobile-web-app-status-bar-style", resolved === "dark" ? "black" : "default");
+  refreshChromeProbes(barColor);
 }
 
 export function applyChrome(theme?: string | null) {
