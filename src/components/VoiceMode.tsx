@@ -67,12 +67,12 @@ const MIN_TTS_SEGMENT_CHARS = 12;   // generative TTS (Eleven v3, 4o-mini-tts)
 // pre-multiplied by the outward unit vector of its CSS translate.
 // Order: blob-2..6, then think bubble (scale 1, no compensation).
 const PETAL_FLOAT = [
-  { ax: 0.84, ay: -4.93, ph: 0.0, T: 1040, sBase: 0.96, sAmp: 0.04 },  // blob-2 (7,-41)/0.60
-  { ax: 5.91, ay: -1.05, ph: 1.7, T: 920, sBase: 0.96, sAmp: 0.04 },   // blob-3 (45,-8)/0.50
-  { ax: 3.06, ay: 4.4, ph: 3.5, T: 1180, sBase: 0.96, sAmp: 0.04 },    // blob-4 (25,36)/0.56
-  { ax: -5.0, ay: 4.19, ph: 5.0, T: 1000, sBase: 0.96, sAmp: 0.04 },   // blob-5 (-31,26)/0.46
-  { ax: -5.04, ay: -2.34, ph: 0.9, T: 1310, sBase: 0.96, sAmp: 0.04 }, // blob-6 (-41,-19)/0.54
-  { ax: -3.78, ay: 3.27, ph: 2.6, T: 1120, sBase: 1.0, sAmp: 0.1 },    // think bubble (-60,52)
+  { ax: 0.62, ay: -3.8, ph: 0.0, T: 1040, sBase: 0.96, sAmp: 0.04 },   // blob-2 (9,-55)/0.78
+  { ax: 4.47, ay: -0.81, ph: 1.7, T: 920, sBase: 0.96, sAmp: 0.04 },   // blob-3 (61,-11)/0.66
+  { ax: 2.47, ay: 3.29, ph: 3.5, T: 1180, sBase: 0.96, sAmp: 0.04 },   // blob-4 (36,48)/0.73
+  { ax: -3.78, ay: 2.9, ph: 5.0, T: 1000, sBase: 0.96, sAmp: 0.04 },   // blob-5 (-47,36)/0.63
+  { ax: -3.89, ay: -1.8, ph: 0.9, T: 1310, sBase: 0.96, sAmp: 0.04 },  // blob-6 (-56,-26)/0.70
+  { ax: -3.62, ay: 3.45, ph: 2.6, T: 1120, sBase: 1.0, sAmp: 0.1 },    // think bubble (-86,82)
 ];
 
 // --- streaming TTS sentence pipeline helpers ---------------------------------

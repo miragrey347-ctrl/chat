@@ -198,29 +198,29 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 }
 
 .voice-think-bubble {
-  width: 22px;
-  height: 22px;
-  margin: -11px 0 0 -11px;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
 }
 
 /* --- listening: everything stacked into one breathing sphere --- */
-.voice-stage-listening .voice-blob { transform: translate(0, 0) scale(1); }
+.voice-stage-listening .voice-blob { transform: translate(0, 0) scale(1.55); }
 /* Bubble hides inside the sphere so entering thinking "births" it out of
    the body edge, and leaving thinking sucks it back in (GPT reference). */
-.voice-stage-listening .voice-think-bubble { transform: translate(-18px, 16px) scale(0.45); }
+.voice-stage-listening .voice-think-bubble { transform: translate(-22px, 20px) scale(0.35); }
 .voice-stage-listening .voice-blob-core {
   animation: voiceBreath 3s ease-in-out infinite;
 }
 
 /* --- thinking: asymmetric cauliflower; spin driven by JS (rAF) because
    iOS Safari silently refuses to run this particular CSS animation --- */
-.voice-stage-thinking .voice-blob-1 { transform: translate(0, 0) scale(0.88); }
-.voice-stage-thinking .voice-blob-2 { transform: translate(7px, -41px) scale(0.60); }
-.voice-stage-thinking .voice-blob-3 { transform: translate(45px, -8px) scale(0.50); }
-.voice-stage-thinking .voice-blob-4 { transform: translate(25px, 36px) scale(0.56); }
-.voice-stage-thinking .voice-blob-5 { transform: translate(-31px, 26px) scale(0.46); }
-.voice-stage-thinking .voice-blob-6 { transform: translate(-41px, -19px) scale(0.54); }
-.voice-stage-thinking .voice-think-bubble { transform: translate(-60px, 52px) scale(1); }
+.voice-stage-thinking .voice-blob-1 { transform: translate(0, 0) scale(1.06); }
+.voice-stage-thinking .voice-blob-2 { transform: translate(9px, -55px) scale(0.78); }
+.voice-stage-thinking .voice-blob-3 { transform: translate(61px, -11px) scale(0.66); }
+.voice-stage-thinking .voice-blob-4 { transform: translate(36px, 48px) scale(0.73); }
+.voice-stage-thinking .voice-blob-5 { transform: translate(-47px, 36px) scale(0.63); }
+.voice-stage-thinking .voice-blob-6 { transform: translate(-56px, -26px) scale(0.70); }
+.voice-stage-thinking .voice-think-bubble { transform: translate(-86px, 82px) scale(1); }
 
 .voice-stage-thinking .voice-blob-1 .voice-blob-core {
   animation: voiceBreath 3s ease-in-out infinite;
@@ -246,7 +246,7 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 .voice-stage-squash .voice-blob-6 { transform: translate(0, 0) scale(0.52, 0.5); }
 .voice-stage-squash .voice-blob-1 .voice-blob-core { animation: none; }
 .voice-stage-squash .voice-think-bubble {
-  transform: translate(-44px, 38px) scale(0);
+  transform: translate(-72px, 70px) scale(0);
   transition-duration: 0.15s;
 }
 
