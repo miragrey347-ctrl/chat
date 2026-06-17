@@ -198,16 +198,16 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 }
 
 .voice-think-bubble {
-  width: 26px;
-  height: 26px;
-  margin: -13px 0 0 -13px;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
 }
 
 /* --- listening: everything stacked into one breathing sphere --- */
 .voice-stage-listening .voice-blob { transform: translate(0, 0) scale(1.55); }
 /* Bubble hides inside the sphere so entering thinking "births" it out of
    the body edge, and leaving thinking sucks it back in (GPT reference). */
-.voice-stage-listening .voice-think-bubble { transform: translate(-22px, 20px) scale(0.35); }
+.voice-stage-listening .voice-think-bubble { transform: translate(-22px, 20px) scale(0.24); }
 .voice-stage-listening .voice-blob-core {
   animation: voiceBreath 3s ease-in-out infinite;
 }
@@ -220,7 +220,7 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 .voice-stage-thinking .voice-blob-4 { transform: translate(36px, 48px) scale(0.73); }
 .voice-stage-thinking .voice-blob-5 { transform: translate(-47px, 36px) scale(0.63); }
 .voice-stage-thinking .voice-blob-6 { transform: translate(-56px, -26px) scale(0.70); }
-.voice-stage-thinking .voice-think-bubble { transform: translate(-86px, 82px) scale(1); }
+.voice-stage-thinking .voice-think-bubble { transform: translate(-98px, 90px) scale(1); }
 
 .voice-stage-thinking .voice-blob-1 .voice-blob-core {
   animation: voiceBreath 3s ease-in-out infinite;
@@ -246,7 +246,7 @@ details[open] > summary svg:last-child { transform: rotate(180deg); }
 .voice-stage-squash .voice-blob-6 { transform: translate(0, 0) scale(0.52, 0.5); }
 .voice-stage-squash .voice-blob-1 .voice-blob-core { animation: none; }
 .voice-stage-squash .voice-think-bubble {
-  transform: translate(-72px, 70px) scale(0);
+  transform: translate(-82px, 76px) scale(0);
   transition-duration: 0.15s;
 }
 

@@ -72,7 +72,7 @@ const PETAL_FLOAT = [
   { ax: 2.47, ay: 3.29, ph: 3.5, T: 1180, sBase: 0.96, sAmp: 0.04 },   // blob-4 (36,48)/0.73
   { ax: -3.78, ay: 2.9, ph: 5.0, T: 1000, sBase: 0.96, sAmp: 0.04 },   // blob-5 (-47,36)/0.63
   { ax: -3.89, ay: -1.8, ph: 0.9, T: 1310, sBase: 0.96, sAmp: 0.04 },  // blob-6 (-56,-26)/0.70
-  { ax: -3.62, ay: 3.45, ph: 2.6, T: 1120, sBase: 1.0, sAmp: 0.1 },    // think bubble (-86,82)
+  { ax: -3.68, ay: 3.38, ph: 2.6, T: 1120, sBase: 1.0, sAmp: 0.1 },    // think bubble (-98,90)
 ];
 
 // --- streaming TTS sentence pipeline helpers ---------------------------------
