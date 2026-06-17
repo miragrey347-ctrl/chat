@@ -1,7 +1,7 @@
-const CACHE_NAME = "chat-v8"; // bump when navigation/theme bootstrap changes
+const CACHE_NAME = "chat-v9"; // bump when navigation/theme bootstrap changes
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(["/chat", "/login"])));
+  event.waitUntil(caches.open(CACHE_NAME));
   self.skipWaiting();
 });
 

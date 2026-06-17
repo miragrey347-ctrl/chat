@@ -4,6 +4,15 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (
+    pathname === "/sw.js" ||
+    pathname === "/manifest.json" ||
+    pathname === "/apple-touch-icon.png" ||
+    pathname.match(/\.(?:ico|png|jpe?g|svg|webp|gif|json|webmanifest|txt|xml)$/)
+  ) {
+    return NextResponse.next();
+  }
+
   // Allow login page and auth API
   if (pathname === "/login" || pathname === "/setup" || pathname.startsWith("/api/auth")) {
     return NextResponse.next();
